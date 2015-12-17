@@ -1,0 +1,9 @@
+package: github.com/bryanl/dolb
+import:
+- package: github.com/gorilla/mux
+- package: github.com/Sirupsen/logrus
+- package: github.com/stretchr/graceful
+- package: github.com/ianschenck/envflag
+- package: github.com/stretchr/testify
+  subpackages:
+  - /assert
