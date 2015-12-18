@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Config is configuration for the load balancer service.
 type Config struct {
 	ClusterOpsFactory func() ClusterOps
 }

@@ -11,7 +11,7 @@ import (
 
 func Test_LBCreateHandler(t *testing.T) {
 	clusterOpsMock := &ClusterOpsMock{}
-	clusterOpsMock.On("Boot", mock.Anything).Return("http://example.com/action/12345", nil)
+	clusterOpsMock.On("Bootstrap", mock.Anything).Return("http://example.com/action/12345", nil)
 
 	config := &Config{
 		ClusterOpsFactory: func() ClusterOps {

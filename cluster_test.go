@@ -49,13 +49,13 @@ func TestBoot(t *testing.T) {
 
 	ds.On("CreateMultiple", mock.Anything).Return(droplets, resp, nil)
 
-	bc := &BootConfig{
+	bc := &BootstrapConfig{
 		Region:  "dev0",
 		SSHKeys: []string{"123456"},
 		Token:   "token",
 	}
 
-	uri, err := co.Boot(bc)
+	uri, err := co.Bootstrap(bc)
 	assert.NoError(t, err)
 	assert.Equal(t, "http://example.com/actions/1234", uri)
 }

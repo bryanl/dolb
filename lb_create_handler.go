@@ -7,12 +7,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// BootstrapClusterRequest is a request to bootstrap a cluster.
 type BootstrapClusterRequest struct {
 	Region  string   `json:"region"`
 	SSHKeys []string `json:"ssh_keys"`
 	Token   string   `json:"token"`
 }
 
+// BootstrapClusterResponse is a bootstrap cluster response.
 type BootstrapClusterResponse struct {
 	ID         string
 	MonitorURI string
@@ -28,14 +30,14 @@ func LBCreateHandler(config *Config, r *http.Request) Response {
 		return Response{body: err, status: 422}
 	}
 
-	bc := &BootConfig{
+	bc := &BootstrapConfig{
 		Region:  bcr.Region,
 		SSHKeys: bcr.SSHKeys,
 		Token:   bcr.Token,
 	}
 
 	co := config.ClusterOpsFactory()
-	u, err := co.Boot(bc)
+	u, err := co.Bootstrap(bc)
 	if err != nil {
 		log.WithError(err).Error("could not bootstrap cluster")
 		return Response{body: err, status: 500}

@@ -26,7 +26,8 @@ type userDataConfig struct {
 	Region string
 }
 
-type BootConfig struct {
+// BootstrapConfig is configuration for Bootstrap.
+type BootstrapConfig struct {
 	Region  string
 	SSHKeys []string
 	Token   string
@@ -44,8 +45,9 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
+// ClusterOps is an interface for cluster operations.
 type ClusterOps interface {
-	Boot(bc *BootConfig) (string, error)
+	Bootstrap(bc *BootstrapConfig) (string, error)
 }
 
 // clusterOps are operations for building clusters.
@@ -56,7 +58,7 @@ type clusterOps struct {
 
 var _ ClusterOps = &clusterOps{}
 
-// NewclusterOps creates an instance of clusterOps.
+// NewClusterOps creates an instance of clusterOps.
 func NewClusterOps() ClusterOps {
 	return &clusterOps{
 		DiscoveryGenerator: discoveryGenerator,
@@ -64,8 +66,8 @@ func NewClusterOps() ClusterOps {
 	}
 }
 
-// Boot bootstraps the cluster and returns a tracking URI or error.
-func (co *clusterOps) Boot(bc *BootConfig) (string, error) {
+// Bootstrap bootstraps the cluster and returns a tracking URI or error.
+func (co *clusterOps) Bootstrap(bc *BootstrapConfig) (string, error) {
 	names := make([]string, 3)
 	id := generateInstanceID()
 	for i := 0; i < 3; i++ {
