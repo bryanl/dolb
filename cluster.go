@@ -3,9 +3,12 @@ package dolb
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"text/template"
+	"time"
 
 	"golang.org/x/oauth2"
 
@@ -15,6 +18,7 @@ import (
 var (
 	coreosImage           = "coreos-stable"
 	discoveryGeneratorURI = "http://discovery.etcd.io/new?size=3"
+	dropletSize           = "512mb"
 )
 
 type userDataConfig struct {
@@ -40,23 +44,33 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
-// ClusterOps are operations for building clusters.
-type ClusterOps struct {
+type ClusterOps interface {
+	Boot(bc *BootConfig) (string, error)
+}
+
+// clusterOps are operations for building clusters.
+type clusterOps struct {
 	DiscoveryGenerator func() (string, error)
 	GodoClientFactory  func(string) *godo.Client
 }
 
-// NewClusterOps creates an instance of ClusterOps.
-func NewClusterOps() *ClusterOps {
-	return &ClusterOps{
+var _ ClusterOps = &clusterOps{}
+
+// NewclusterOps creates an instance of clusterOps.
+func NewClusterOps() ClusterOps {
+	return &clusterOps{
 		DiscoveryGenerator: discoveryGenerator,
 		GodoClientFactory:  godoClientFactory,
 	}
 }
 
 // Boot bootstraps the cluster and returns a tracking URI or error.
-func (co *ClusterOps) Boot(bc *BootConfig) (string, error) {
-	names := []string{"lb-node-1", "lb-node-2", "lb-node-3"}
+func (co *clusterOps) Boot(bc *BootConfig) (string, error) {
+	names := make([]string, 3)
+	id := generateInstanceID()
+	for i := 0; i < 3; i++ {
+		names[i] = fmt.Sprintf("lb-node-%s", id)
+	}
 
 	keys := []godo.DropletCreateSSHKey{}
 	for _, k := range bc.SSHKeys {
@@ -72,7 +86,7 @@ func (co *ClusterOps) Boot(bc *BootConfig) (string, error) {
 		return "", err
 	}
 
-	userData, err := co.UserData(du, bc.Region)
+	userData, err := co.userData(du, bc.Region)
 	if err != nil {
 		return "", err
 	}
@@ -81,6 +95,7 @@ func (co *ClusterOps) Boot(bc *BootConfig) (string, error) {
 		Names:             names,
 		Region:            bc.Region,
 		Image:             godo.DropletCreateImage{Slug: coreosImage},
+		Size:              dropletSize,
 		SSHKeys:           keys,
 		PrivateNetworking: true,
 		UserData:          userData,
@@ -118,7 +133,7 @@ func discoveryGenerator() (string, error) {
 }
 
 // UserData creates a cloud config.
-func (co *ClusterOps) UserData(token, region string) (string, error) {
+func (co *clusterOps) userData(token, region string) (string, error) {
 	t, err := template.New("user-data").Parse(userDataTemplate)
 	if err != nil {
 		return "", err
@@ -153,6 +168,17 @@ func findAction(rel string, actions []godo.LinkAction) string {
 	}
 
 	return ""
+}
+
+func generateInstanceID() string {
+	strlen := 10
+	rand.Seed(time.Now().UTC().UnixNano())
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, strlen)
+	for i := 0; i < strlen; i++ {
+		result[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(result)
 }
 
 //go:generate embed file -var userDataTemplate --source user_data_template.yml

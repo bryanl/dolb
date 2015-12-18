@@ -19,8 +19,13 @@ func TestTokenSource(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestBoot(t *testing.T) {
+func TestNewClusterOps(t *testing.T) {
 	co := NewClusterOps()
+	assert.NotNil(t, co)
+}
+
+func TestBoot(t *testing.T) {
+	co := &clusterOps{}
 	co.DiscoveryGenerator = func() (string, error) {
 		return "http://example.com/token", nil
 	}
@@ -78,8 +83,8 @@ func TestUserData(t *testing.T) {
 	token := "12345"
 	region := "dev0"
 
-	cm := NewClusterOps()
-	userData, err := cm.UserData(token, region)
+	co := &clusterOps{}
+	userData, err := co.userData(token, region)
 	assert.NoError(t, err)
 
 	fmt.Println(userData)
@@ -89,4 +94,14 @@ func TestUserData(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, token, m["token"])
 	assert.Equal(t, region, m["region"])
+}
+
+func Test_godoClientFactory(t *testing.T) {
+	gc := godoClientFactory("test-token")
+	assert.NotNil(t, gc)
+}
+
+func Test_generateInstanceID(t *testing.T) {
+	id := generateInstanceID()
+	assert.Equal(t, 10, len(id))
 }

@@ -40,8 +40,13 @@ func TestResponse_MarshalJSON_Error(t *testing.T) {
 
 func TestHandler_ServeHTTP(t *testing.T) {
 	h := &Handler{
-		f: func(r *http.Request) Response {
+		f: func(config *Config, r *http.Request) Response {
 			return Response{status: http.StatusOK}
+		},
+		config: &Config{
+			ClusterOpsFactory: func() ClusterOps {
+				return &ClusterOpsMock{}
+			},
 		},
 	}
 
