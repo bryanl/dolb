@@ -1,5 +1,5 @@
 // Package dolb provides a service to create DigitalOcean load balancers.
-package dolb
+package server
 
 import (
 	"encoding/json"

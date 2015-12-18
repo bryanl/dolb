@@ -6,9 +6,9 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb"
-	"github.com/bryanl/dolb/vendor/github.com/tylerb/graceful"
+	"github.com/bryanl/dolb/server"
 	"github.com/ianschenck/envflag"
+	"github.com/tylerb/graceful"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 func main() {
 	envflag.Parse()
 
-	api := dolb.New()
+	api := server.New()
 
 	errChan := make(chan error)
 	go func() {

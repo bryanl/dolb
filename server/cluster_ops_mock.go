@@ -1,4 +1,4 @@
-package dolb
+package server
 
 import "github.com/stretchr/testify/mock"
 

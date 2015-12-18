@@ -1,4 +1,4 @@
-package dolb
+package server
 
 import (
 	"encoding/json"
