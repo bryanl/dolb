@@ -2,8 +2,23 @@ package dolb
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"text/template"
+	"time"
+
+	"golang.org/x/oauth2"
+
+	"github.com/digitalocean/godo"
+)
+
+var (
+	coreosImage           = "coreos-stable"
+	discoveryGeneratorURI = "http://discovery.etcd.io/new?size=3"
+	dropletSize           = "512mb"
 )
 
 type userDataConfig struct {
@@ -11,21 +26,99 @@ type userDataConfig struct {
 	Region string
 }
 
-// ClusterOps are operations for building clusters.
-type ClusterOps struct {
-	DiscoveryGeneratorURL string
+// BootstrapConfig is configuration for Bootstrap.
+type BootstrapConfig struct {
+	Region  string
+	SSHKeys []string
+	Token   string
 }
 
-// NewClusterOps creates an instance of ClusterOps.
-func NewClusterOps() *ClusterOps {
-	return &ClusterOps{
-		DiscoveryGeneratorURL: "https://discovery.etcd.io/new?size=3",
+// TokenSource holds an oauth token.
+type TokenSource struct {
+	AccessToken string
+}
+
+// Token returns an oauth token.
+func (t *TokenSource) Token() (*oauth2.Token, error) {
+	return &oauth2.Token{
+		AccessToken: t.AccessToken,
+	}, nil
+}
+
+// ClusterOps is an interface for cluster operations.
+type ClusterOps interface {
+	Bootstrap(bc *BootstrapConfig) (string, error)
+}
+
+// clusterOps are operations for building clusters.
+type clusterOps struct {
+	DiscoveryGenerator func() (string, error)
+	GodoClientFactory  func(string) *godo.Client
+}
+
+var _ ClusterOps = &clusterOps{}
+
+// NewClusterOps creates an instance of clusterOps.
+func NewClusterOps() ClusterOps {
+	return &clusterOps{
+		DiscoveryGenerator: discoveryGenerator,
+		GodoClientFactory:  godoClientFactory,
 	}
 }
 
-// DiscoveryURI returns a coreos discovery token.
-func (cm *ClusterOps) DiscoveryURI() (string, error) {
-	resp, err := http.Get(cm.DiscoveryGeneratorURL)
+// Bootstrap bootstraps the cluster and returns a tracking URI or error.
+func (co *clusterOps) Bootstrap(bc *BootstrapConfig) (string, error) {
+	names := make([]string, 3)
+	id := generateInstanceID()
+	for i := 0; i < 3; i++ {
+		names[i] = fmt.Sprintf("lb-node-%s", id)
+	}
+
+	keys := []godo.DropletCreateSSHKey{}
+	for _, k := range bc.SSHKeys {
+		i, err := strconv.Atoi(k)
+		if err != nil {
+			return "", err
+		}
+		keys = append(keys, godo.DropletCreateSSHKey{ID: i})
+	}
+
+	du, err := co.DiscoveryGenerator()
+	if err != nil {
+		return "", err
+	}
+
+	userData, err := co.userData(du, bc.Region)
+	if err != nil {
+		return "", err
+	}
+
+	dmcr := godo.DropletMultiCreateRequest{
+		Names:             names,
+		Region:            bc.Region,
+		Image:             godo.DropletCreateImage{Slug: coreosImage},
+		Size:              dropletSize,
+		SSHKeys:           keys,
+		PrivateNetworking: true,
+		UserData:          userData,
+	}
+
+	godoc := co.GodoClientFactory(bc.Token)
+	_, resp, err := godoc.Droplets.CreateMultiple(&dmcr)
+	if err != nil {
+		return "", err
+	}
+
+	action := findAction("multiple_create", resp.Links.Actions)
+	if action == "" {
+		return "", errors.New("no multiple_create action found")
+	}
+
+	return action, nil
+}
+
+func discoveryGenerator() (string, error) {
+	resp, err := http.Get(discoveryGeneratorURI)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +135,7 @@ func (cm *ClusterOps) DiscoveryURI() (string, error) {
 }
 
 // UserData creates a cloud config.
-func (cm *ClusterOps) UserData(token, region string) (string, error) {
+func (co *clusterOps) userData(token, region string) (string, error) {
 	t, err := template.New("user-data").Parse(userDataTemplate)
 	if err != nil {
 		return "", err
@@ -61,6 +154,33 @@ func (cm *ClusterOps) UserData(token, region string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func godoClientFactory(token string) *godo.Client {
+	ts := &TokenSource{AccessToken: token}
+	oc := oauth2.NewClient(oauth2.NoContext, ts)
+	return godo.NewClient(oc)
+}
+
+func findAction(rel string, actions []godo.LinkAction) string {
+	for _, a := range actions {
+		if a.Rel == rel {
+			return a.HREF
+		}
+	}
+
+	return ""
+}
+
+func generateInstanceID() string {
+	strlen := 10
+	rand.Seed(time.Now().UTC().UnixNano())
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, strlen)
+	for i := 0; i < strlen; i++ {
+		result[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(result)
 }
 
 //go:generate embed file -var userDataTemplate --source user_data_template.yml
