@@ -7,3 +7,5 @@ import:
 - package: github.com/stretchr/testify
   subpackages:
   - /assert
+- package: github.com/digitalocean/godo
+- package: github.com/vektra/mockery

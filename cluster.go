@@ -2,8 +2,19 @@ package dolb
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
+	"strconv"
 	"text/template"
+
+	"golang.org/x/oauth2"
+
+	"github.com/digitalocean/godo"
+)
+
+var (
+	coreosImage           = "coreos-stable"
+	discoveryGeneratorURI = "http://discovery.etcd.io/new?size=3"
 )
 
 type userDataConfig struct {
@@ -11,21 +22,86 @@ type userDataConfig struct {
 	Region string
 }
 
+type BootConfig struct {
+	Region  string
+	SSHKeys []string
+	Token   string
+}
+
+// TokenSource holds an oauth token.
+type TokenSource struct {
+	AccessToken string
+}
+
+// Token returns an oauth token.
+func (t *TokenSource) Token() (*oauth2.Token, error) {
+	return &oauth2.Token{
+		AccessToken: t.AccessToken,
+	}, nil
+}
+
 // ClusterOps are operations for building clusters.
 type ClusterOps struct {
-	DiscoveryGeneratorURL string
+	DiscoveryGenerator func() (string, error)
+	GodoClientFactory  func(string) *godo.Client
 }
 
 // NewClusterOps creates an instance of ClusterOps.
 func NewClusterOps() *ClusterOps {
 	return &ClusterOps{
-		DiscoveryGeneratorURL: "https://discovery.etcd.io/new?size=3",
+		DiscoveryGenerator: discoveryGenerator,
+		GodoClientFactory:  godoClientFactory,
 	}
 }
 
-// DiscoveryURI returns a coreos discovery token.
-func (cm *ClusterOps) DiscoveryURI() (string, error) {
-	resp, err := http.Get(cm.DiscoveryGeneratorURL)
+// Boot bootstraps the cluster and returns a tracking URI or error.
+func (co *ClusterOps) Boot(bc *BootConfig) (string, error) {
+	names := []string{"lb-node-1", "lb-node-2", "lb-node-3"}
+
+	keys := []godo.DropletCreateSSHKey{}
+	for _, k := range bc.SSHKeys {
+		i, err := strconv.Atoi(k)
+		if err != nil {
+			return "", err
+		}
+		keys = append(keys, godo.DropletCreateSSHKey{ID: i})
+	}
+
+	du, err := co.DiscoveryGenerator()
+	if err != nil {
+		return "", err
+	}
+
+	userData, err := co.UserData(du, bc.Region)
+	if err != nil {
+		return "", err
+	}
+
+	dmcr := godo.DropletMultiCreateRequest{
+		Names:             names,
+		Region:            bc.Region,
+		Image:             godo.DropletCreateImage{Slug: coreosImage},
+		SSHKeys:           keys,
+		PrivateNetworking: true,
+		UserData:          userData,
+	}
+
+	godoc := co.GodoClientFactory(bc.Token)
+	_, resp, err := godoc.Droplets.CreateMultiple(&dmcr)
+	if err != nil {
+		return "", err
+	}
+
+	action := findAction("multiple_create", resp.Links.Actions)
+	if action == "" {
+		return "", errors.New("no multiple_create action found")
+	}
+
+	return action, nil
+}
+
+func discoveryGenerator() (string, error) {
+	resp, err := http.Get(discoveryGeneratorURI)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +118,7 @@ func (cm *ClusterOps) DiscoveryURI() (string, error) {
 }
 
 // UserData creates a cloud config.
-func (cm *ClusterOps) UserData(token, region string) (string, error) {
+func (co *ClusterOps) UserData(token, region string) (string, error) {
 	t, err := template.New("user-data").Parse(userDataTemplate)
 	if err != nil {
 		return "", err
@@ -61,6 +137,22 @@ func (cm *ClusterOps) UserData(token, region string) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func godoClientFactory(token string) *godo.Client {
+	ts := &TokenSource{AccessToken: token}
+	oc := oauth2.NewClient(oauth2.NoContext, ts)
+	return godo.NewClient(oc)
+}
+
+func findAction(rel string, actions []godo.LinkAction) string {
+	for _, a := range actions {
+		if a.Rel == rel {
+			return a.HREF
+		}
+	}
+
+	return ""
 }
 
 //go:generate embed file -var userDataTemplate --source user_data_template.yml

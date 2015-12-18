@@ -1,11 +1,16 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-17T16:32:17.625173819-05:00
+updated: 2015-12-17T23:00:42.263623084-05:00
 imports:
 - name: github.com/codegangsta/negroni
   version: c7477ad8e330bef55bf1ebe300cf8aa67c492d1b
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
-  repo: https://github.com/davecgh/go-spew
+- name: github.com/digitalocean/godo
+  version: 2688c11a02dc3deac65645c82c3c812f95e417bf
+- name: github.com/golang/protobuf
+  version: 68415e7123da32b07eab49c96d2c4d6158360e9b
+- name: github.com/google/go-querystring
+  version: 2a60fc2ba6c19de80291203597d752e9ba58e4c0
 - name: github.com/gorilla/context
   version: 1c83b3eabd45b6d76072b66b746c20815fb2872d
 - name: github.com/gorilla/mux
@@ -14,7 +19,6 @@ imports:
   version: 9111d830d133f952887a936367fb0211c3134f0d
 - name: github.com/pmezard/go-difflib
   version: e8554b8641db39598be7f6342874b958f12ae1d4
-  repo: https://github.com/pmezard/go-difflib
 - name: github.com/Sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
 - name: github.com/stretchr/graceful
@@ -25,14 +29,26 @@ imports:
   version: e3a8ff8ce36581f87a15341206f205b1da467059
   subpackages:
   - /assert
+- name: github.com/tent/http-link-go
+  version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: github.com/tylerb/graceful
   version: 48afeb21e2fcbcff0f30bd5ad6b97747b0fae38e
+- name: github.com/vektra/errors
+  version: c64d83aba85aa4392895aadeefabbd24e89f3580
+  repo: https://github.com/vektra/errors
+- name: github.com/vektra/mockery
+  version: 6f106ca84af871afc7c8e6aaf3de0fcc5e7a57e6
 - name: golang.org/x/crypto
   version: f18420efc3b4f8e9f3d51f6bd2476e92c46260e9
 - name: golang.org/x/net
   version: 28273ec927bee3bea305f112fc28ceee575ea893
 - name: golang.org/x/text
-  version: eab9e05b70da3a6e6a1461f45cf6141929b8f753
+  version: cf4986612c83df6c55578ba198316d1684a9a287
+- name: golang.org/x/tools
+  version: 4a5fb9938b381c8d0933806c456cc00fe2a2c8a9
+- name: google.golang.org/appengine
+  version: 58c0e2a2044a8d1abd8dd1d97939cd74497d0806
+  repo: https://google.golang.org/appengine
 - name: gopkg.in/airbrake/gobrake.v2
   version: c9d51adc624b5cc4c1bf8de730a09af4878ffe2d
 - name: gopkg.in/gemnasium/logrus-airbrake-hook.v2
