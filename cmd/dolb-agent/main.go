@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/agent"
 	etcdclient "github.com/coreos/etcd/client"
@@ -40,10 +42,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	lc := agent.NewEtcdLeader(generateInstanceID(), c)
-	err = lc.Start()
+	ctx := context.Background()
+	el := agent.NewClusterMember(ctx, generateInstanceID(), c)
+	err = el.Start()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	for {
+		select {
+		case leader := <-el.Change():
+			log.WithField("new-leader", leader).Info("leader changed")
+		}
 	}
 }
 
