@@ -1,8 +1,8 @@
 package main
 
 import (
-	"flag"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -12,17 +12,21 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/agent"
 	etcdclient "github.com/coreos/etcd/client"
+	"github.com/ianschenck/envflag"
+	"github.com/tylerb/graceful"
 )
 
 var (
-	etcdEndpoints = flag.String("etcdEndpoints", "", "comma separted list of ectd endpoints")
+	addr          = envflag.String("ADDR", ":8889", "listen address")
+	etcdEndpoints = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
 )
 
 func main() {
-	flag.Parse()
+	envflag.Parse()
 
 	if *etcdEndpoints == "" {
-		flag.Usage()
+		log.Error("missing ETCDENDPOINTS environment variable")
+		envflag.PrintDefaults()
 		os.Exit(1)
 	}
 
@@ -49,12 +53,41 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for {
-		select {
-		case leader := <-el.Change():
-			log.WithField("new-leader", leader).Info("leader changed")
+	config := &agent.Config{}
+
+	go func(c *agent.Config) {
+		for {
+			select {
+			case leader := <-el.Change():
+				log.WithField("new-leader", leader).Info("leader changed")
+				config.Lock()
+				config.Leader = leader
+				config.Unlock()
+			}
 		}
+	}(config)
+
+	api := agent.New(config)
+
+	errChan := make(chan error)
+	go func() {
+		httpServer := graceful.Server{
+			Timeout: 10 * time.Second,
+			Server: &http.Server{
+				Addr:    *addr,
+				Handler: api.Mux,
+			},
+		}
+
+		log.WithField("addr", *addr).Info("starting http listener")
+		errChan <- httpServer.ListenAndServe()
+	}()
+
+	err = <-errChan
+	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+		log.WithError(err).Panic("unexpected error")
 	}
+
 }
 
 func generateInstanceID() string {
