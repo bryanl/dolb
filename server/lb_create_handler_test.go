@@ -25,9 +25,9 @@ func Test_LBCreateHandler(t *testing.T) {
 
 	resp := LBCreateHandler(config, r)
 
-	assert.Equal(t, http.StatusCreated, resp.status)
+	assert.Equal(t, http.StatusCreated, resp.Status)
 
-	bcr := resp.body.(BootstrapClusterResponse)
+	bcr := resp.Body.(BootstrapClusterResponse)
 	assert.Equal(t, "lb-1", bcr.ID)
 	assert.Equal(t, "http://example.com/action/12345", bcr.MonitorURI)
 }

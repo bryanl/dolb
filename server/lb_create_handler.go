@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/service"
 )
 
 // BootstrapClusterResponse is a bootstrap cluster response.
@@ -14,20 +15,21 @@ type BootstrapClusterResponse struct {
 }
 
 // LBCreateHandler is a http handler for creating a load balancer.
-func LBCreateHandler(config *Config, r *http.Request) Response {
+func LBCreateHandler(c interface{}, r *http.Request) service.Response {
+	config := c.(*Config)
 	defer r.Body.Close()
 
 	var bc BootstrapConfig
 	err := json.NewDecoder(r.Body).Decode(&bc)
 	if err != nil {
-		return Response{body: err, status: 422}
+		return service.Response{Body: err, Status: 422}
 	}
 
 	co := config.ClusterOpsFactory()
 	u, err := co.Bootstrap(&bc)
 	if err != nil {
 		log.WithError(err).Error("could not bootstrap cluster")
-		return Response{body: err, status: 400}
+		return service.Response{Body: err, Status: 400}
 	}
 
 	bcResp := BootstrapClusterResponse{
@@ -35,5 +37,5 @@ func LBCreateHandler(config *Config, r *http.Request) Response {
 		MonitorURI: u,
 	}
 
-	return Response{body: bcResp, status: http.StatusCreated}
+	return service.Response{Body: bcResp, Status: http.StatusCreated}
 }
