@@ -18,11 +18,16 @@ import (
 
 var (
 	addr          = envflag.String("ADDR", ":8889", "listen address")
+	agentName     = envflag.String("AGENT_NAME", "", "name for agent")
 	etcdEndpoints = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
 )
 
 func main() {
 	envflag.Parse()
+
+	if *agentName == "" {
+		*agentName = generateInstanceID()
+	}
 
 	if *etcdEndpoints == "" {
 		log.Error("missing ETCDENDPOINTS environment variable")
@@ -47,7 +52,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	el := agent.NewClusterMember(ctx, generateInstanceID(), c)
+	el := agent.NewClusterMember(ctx, *agentName, c)
 	err = el.Start()
 	if err != nil {
 		log.Fatal(err)
