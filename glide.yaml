@@ -5,7 +5,9 @@ import:
 - package: github.com/stretchr/graceful
 - package: github.com/ianschenck/envflag
 - package: github.com/stretchr/testify
+  version: 9cc77fa25329013ce07362c7742952ff887361f2
   subpackages:
   - /assert
 - package: github.com/digitalocean/godo
 - package: github.com/vektra/mockery
+- package: github.com/coreos/etcd
