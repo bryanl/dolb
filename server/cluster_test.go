@@ -14,6 +14,23 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func Test_isValidClusterName(t *testing.T) {
+	cases := []struct {
+		name    string
+		isValid bool
+	}{
+		{name: "my-cluster", isValid: true},
+		{name: "12345", isValid: true},
+		{name: "!", isValid: false},
+		{name: "", isValid: false},
+	}
+
+	for _, c := range cases {
+		got := isValidClusterName(c.name)
+		assert.Equal(t, c.isValid, got)
+	}
+}
+
 func TestBoostrapConfig_HasSyslog(t *testing.T) {
 	bc := &BootstrapConfig{
 		Region:  "dev0",
@@ -42,7 +59,12 @@ func TestNewClusterOps(t *testing.T) {
 	assert.NotNil(t, co)
 }
 
-func TestBoot(t *testing.T) {
+type withMockGodoClusterOpts func(*clusterOps, *godoMocks)
+type godoMocks struct {
+	Droplets *mocks.DropletsService
+}
+
+func withMockGodo(fn withMockGodoClusterOpts) {
 	co := &clusterOps{}
 	co.DiscoveryGenerator = func() (string, error) {
 		return "http://example.com/token", nil
@@ -55,27 +77,51 @@ func TestBoot(t *testing.T) {
 		return gc
 	}
 
-	droplet := godo.Droplet{}
-	droplets := []godo.Droplet{droplet}
-	resp := &godo.Response{
-		Links: &godo.Links{
-			Actions: []godo.LinkAction{
-				godo.LinkAction{HREF: "http://example.com/actions/1234", Rel: "multiple_create"},
+	gm := &godoMocks{
+		Droplets: ds,
+	}
+
+	fn(co, gm)
+}
+
+func TestBootstrap(t *testing.T) {
+	withMockGodo(func(co *clusterOps, gm *godoMocks) {
+		droplet := godo.Droplet{}
+		droplets := []godo.Droplet{droplet}
+		resp := &godo.Response{
+			Links: &godo.Links{
+				Actions: []godo.LinkAction{
+					godo.LinkAction{HREF: "http://example.com/actions/1234", Rel: "multiple_create"},
+				},
 			},
-		},
-	}
+		}
 
-	ds.On("CreateMultiple", mock.Anything).Return(droplets, resp, nil)
+		gm.Droplets.On("CreateMultiple", mock.Anything).Return(droplets, resp, nil)
 
-	bc := &BootstrapConfig{
-		Region:  "dev0",
-		SSHKeys: []string{"123456"},
-		Token:   "token",
-	}
+		bc := &BootstrapConfig{
+			Name:    "test-cluster",
+			Region:  "dev0",
+			SSHKeys: []string{"123456"},
+			Token:   "token",
+		}
 
-	uri, err := co.Bootstrap(bc)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://example.com/actions/1234", uri)
+		uri, err := co.Bootstrap(bc)
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example.com/actions/1234", uri)
+	})
+}
+
+func TestBootstrap_MissingName(t *testing.T) {
+	withMockGodo(func(co *clusterOps, gm *godoMocks) {
+		bc := &BootstrapConfig{
+			Region:  "dev0",
+			SSHKeys: []string{"123456"},
+			Token:   "token",
+		}
+
+		_, err := co.Bootstrap(bc)
+		assert.Error(t, err)
+	})
 }
 
 func Test_discoveryGenerator(t *testing.T) {

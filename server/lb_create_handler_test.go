@@ -19,7 +19,7 @@ func Test_LBCreateHandler(t *testing.T) {
 		},
 	}
 
-	body := []byte(`{"region": "dev0", "ssh_keys": ["12345"], "token": "do-token"}`)
+	body := []byte(`{"name": "lb-1", "region": "dev0", "ssh_keys": ["12345"], "token": "do-token"}`)
 	r, err := http.NewRequest("POST", "http://example.com/lb", bytes.NewBuffer(body))
 	assert.NoError(t, err)
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"text/template"
 	"time"
@@ -19,6 +20,8 @@ var (
 	coreosImage           = "coreos-stable"
 	discoveryGeneratorURI = "http://discovery.etcd.io/new?size=3"
 	dropletSize           = "512mb"
+
+	reClusterName = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 )
 
 type userDataConfig struct {
@@ -28,6 +31,7 @@ type userDataConfig struct {
 
 // BootstrapConfig is configuration for Bootstrap.
 type BootstrapConfig struct {
+	Name    string   `json:"name"`
 	Region  string   `json:"region"`
 	SSHKeys []string `json:"ssh_keys"`
 	Token   string   `json:"token"`
@@ -35,6 +39,7 @@ type BootstrapConfig struct {
 	RemoteSyslog *RemoteSyslog `json:"remote_syslog"`
 }
 
+// HasSyslog returns if a BootstrapConfig has a syslog configuration.
 func (bc *BootstrapConfig) HasSyslog() bool {
 	return bc.RemoteSyslog != nil
 }
@@ -81,10 +86,13 @@ func NewClusterOps() ClusterOps {
 
 // Bootstrap bootstraps the cluster and returns a tracking URI or error.
 func (co *clusterOps) Bootstrap(bc *BootstrapConfig) (string, error) {
+	if !isValidClusterName(bc.Name) {
+		return "", errors.New("invalid cluster name")
+	}
+
 	names := make([]string, 3)
-	id := generateInstanceID()
 	for i := 0; i < 3; i++ {
-		names[i] = fmt.Sprintf("lb-node-%s", id)
+		names[i] = fmt.Sprintf("lb-%s-%d", bc.Name, i+1)
 	}
 
 	keys := []godo.DropletCreateSSHKey{}
@@ -194,6 +202,10 @@ func generateInstanceID() string {
 		result[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(result)
+}
+
+func isValidClusterName(name string) bool {
+	return reClusterName.Match([]byte(name))
 }
 
 //go:generate embed file -var userDataTemplate --source user_data_template.yml

@@ -27,11 +27,11 @@ func LBCreateHandler(config *Config, r *http.Request) Response {
 	u, err := co.Bootstrap(&bc)
 	if err != nil {
 		log.WithError(err).Error("could not bootstrap cluster")
-		return Response{body: err, status: 500}
+		return Response{body: err, status: 400}
 	}
 
 	bcResp := BootstrapClusterResponse{
-		ID:         "lb-1",
+		ID:         bc.Name,
 		MonitorURI: u,
 	}
 
