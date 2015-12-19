@@ -9,7 +9,7 @@ coreos:
     listen-peer-urls: http://$private_ipv4:2380
   fleet:
     public-ip: $private_ipv4
-    metadata: region={{.Region}},public_ip=$public_ipv4
+    metadata: region={{.BootstrapConfig.Region}},public_ip=$public_ipv4
 
   units:
     - name: etcd2.service
@@ -30,6 +30,21 @@ coreos:
         Type=oneshot
         RemainAfterExit=yes
         ExecStart=/root/bin/fixup_firewall.sh
+    {{if .BootstrapConfig.HasSyslog}}- name: remote_syslog.service
+      command: start
+      content: |
+        Description=Remote Syslog
+        After=systemd-journald.service
+        Requires=systemd-journald.service
+
+        [Service]
+        ExecStart=/bin/sh -c "journalctl -f | ncat {{if .BootstrapConfig.RemoteSyslog.EnableSSL}}--ssl{{end}} {{.BootstrapConfig.RemoteSyslog.Host}} {{.BootstrapConfig.RemoteSyslog.Port}}"
+        TimeoutStartSec=0
+        Restart=on-failure
+        RestartSec=5s
+        
+        [Install]
+        WantedBy=multi-user.target{{end}}
 
 write_files:
   - path: /root/bin/fixup_firewall.sh

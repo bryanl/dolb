@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/dolb/mocks"
@@ -12,6 +13,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func TestBoostrapConfig_HasSyslog(t *testing.T) {
+	bc := &BootstrapConfig{
+		Region:  "dev0",
+		SSHKeys: []string{"123456"},
+		Token:   "token",
+	}
+
+	assert.False(t, bc.HasSyslog())
+
+	bc.RemoteSyslog = &RemoteSyslog{
+		Host: "example.com",
+		Port: 515,
+	}
+
+	assert.True(t, bc.HasSyslog())
+}
 
 func TestTokenSource(t *testing.T) {
 	ts := TokenSource{AccessToken: "token"}
@@ -78,13 +96,30 @@ func Test_discoveryGenerator(t *testing.T) {
 func TestUserData(t *testing.T) {
 	defer func(udt string) { userDataTemplate = udt }(userDataTemplate)
 
-	userDataTemplate = `{"token":"{{.Token}}", "region":"{{.Region}}"}`
+	mT := map[string]string{
+		"token":    "{{.Token}}",
+		"region":   "{{.BootstrapConfig.Region}}",
+		"log.host": "{{.BootstrapConfig.RemoteSyslog.Host}}",
+		"log.port": "{{.BootstrapConfig.RemoteSyslog.Port}}",
+	}
+
+	b, err := json.Marshal(&mT)
+	assert.NoError(t, err)
+	userDataTemplate = string(b)
 
 	token := "12345"
-	region := "dev0"
+
+	bc := &BootstrapConfig{
+		Region: "dev0",
+		RemoteSyslog: &RemoteSyslog{
+			EnableSSL: true,
+			Host:      "host",
+			Port:      515,
+		},
+	}
 
 	co := &clusterOps{}
-	userData, err := co.userData(token, region)
+	userData, err := co.userData(token, bc)
 	assert.NoError(t, err)
 
 	fmt.Println(userData)
@@ -93,7 +128,9 @@ func TestUserData(t *testing.T) {
 	err = json.Unmarshal([]byte(userData), &m)
 	assert.NoError(t, err)
 	assert.Equal(t, token, m["token"])
-	assert.Equal(t, region, m["region"])
+	assert.Equal(t, bc.Region, m["region"])
+	assert.Equal(t, bc.RemoteSyslog.Host, m["log.host"])
+	assert.Equal(t, strconv.Itoa(bc.RemoteSyslog.Port), m["log.port"])
 }
 
 func Test_godoClientFactory(t *testing.T) {
