@@ -25,6 +25,10 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: err, Status: 422}
 	}
 
+	if bc.DigitalOceanToken == "" {
+		return service.Response{Body: "digitalocean_token is required", Status: 400}
+	}
+
 	co := config.ClusterOpsFactory()
 	u, err := co.Bootstrap(&bc)
 	if err != nil {

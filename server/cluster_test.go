@@ -33,9 +33,9 @@ func Test_isValidClusterName(t *testing.T) {
 
 func TestBoostrapConfig_HasSyslog(t *testing.T) {
 	bc := &BootstrapConfig{
-		Region:  "dev0",
-		SSHKeys: []string{"123456"},
-		Token:   "token",
+		Region:            "dev0",
+		SSHKeys:           []string{"123456"},
+		DigitalOceanToken: "token",
 	}
 
 	assert.False(t, bc.HasSyslog())
@@ -99,10 +99,10 @@ func TestBootstrap(t *testing.T) {
 		gm.Droplets.On("CreateMultiple", mock.Anything).Return(droplets, resp, nil)
 
 		bc := &BootstrapConfig{
-			Name:    "test-cluster",
-			Region:  "dev0",
-			SSHKeys: []string{"123456"},
-			Token:   "token",
+			Name:              "test-cluster",
+			Region:            "dev0",
+			SSHKeys:           []string{"123456"},
+			DigitalOceanToken: "token",
 		}
 
 		uri, err := co.Bootstrap(bc)
@@ -114,9 +114,9 @@ func TestBootstrap(t *testing.T) {
 func TestBootstrap_MissingName(t *testing.T) {
 	withMockGodo(func(co *clusterOps, gm *godoMocks) {
 		bc := &BootstrapConfig{
-			Region:  "dev0",
-			SSHKeys: []string{"123456"},
-			Token:   "token",
+			Region:            "dev0",
+			SSHKeys:           []string{"123456"},
+			DigitalOceanToken: "token",
 		}
 
 		_, err := co.Bootstrap(bc)
@@ -143,8 +143,9 @@ func TestUserData(t *testing.T) {
 	defer func(udt string) { userDataTemplate = udt }(userDataTemplate)
 
 	mT := map[string]string{
-		"token":    "{{.Token}}",
+		"token":    "{{.CoreosToken}}",
 		"region":   "{{.BootstrapConfig.Region}}",
+		"do_token": "{{.BootstrapConfig.DigitalOceanToken}}",
 		"log.host": "{{.BootstrapConfig.RemoteSyslog.Host}}",
 		"log.port": "{{.BootstrapConfig.RemoteSyslog.Port}}",
 	}

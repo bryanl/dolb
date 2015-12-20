@@ -2,7 +2,7 @@
 
 coreos:
   etcd2:
-    discovery: {{.Token}}
+    discovery: {{.CoreosToken}}
     advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001
     initial-advertise-peer-urls: http://$private_ipv4:2380
     listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
@@ -85,11 +85,15 @@ write_files:
       TimeoutStartSec=0
       EnvironmentFile=/etc/environment
       Environment=AGENT_VERSION={{.AgentVersion}}
-      ExecStart=/usr/bin/docker run -p 8889:8889 --rm  -e AGENT_NAME=dolb-agent-%i -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.1
+      ExecStart=/usr/bin/docker run -p 8889:8889 --rm --env-file /home/core/digitalocean.env  -e AGENT_NAME=dolb-agent-%i -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.1
       ExecStop=/usr/bin/docker kill dolb-agent-%i
 
       [X-Fleet]
       Conflicts=dolb-agent@*.service
+  - path: /home/core/digitalocean.env
+    permissions: 0644
+    content: |
+      DIGITALOCEAN_ACCESS_TOKEN="{{.BootstrapConfig.DigitalOceanToken}}"
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |
