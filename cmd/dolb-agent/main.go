@@ -30,13 +30,13 @@ func main() {
 		*agentName = generateInstanceID()
 	}
 
-	etcdClient, err := genEtcdClient()
+	kapi, err := genKeysAPI()
 	if err != nil {
-		log.WithError(err).Fatal("could not create etcd client")
+		log.WithError(err).Fatal("could not create keys api client")
 	}
 
 	ctx := context.Background()
-	cm := agent.NewClusterMember(ctx, *agentName, etcdClient)
+	cm := agent.NewClusterMember(ctx, *agentName, kapi)
 	err = cm.Start()
 	if err != nil {
 		log.WithError(err).Fatal("could not start cluster membership")
@@ -80,7 +80,7 @@ func generateInstanceID() string {
 	return string(result)
 }
 
-func genEtcdClient() (etcdclient.Client, error) {
+func genKeysAPI() (etcdclient.KeysAPI, error) {
 	if *etcdEndpoints == "" {
 		return nil, errors.New("missing ETCDENDPOINTS environment variable")
 	}
@@ -96,7 +96,12 @@ func genEtcdClient() (etcdclient.Client, error) {
 		etcdConfig.Endpoints = append(etcdConfig.Endpoints, ep)
 	}
 
-	return etcdclient.New(etcdConfig)
+	c, err := etcdclient.New(etcdConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return etcdclient.NewKeysAPI(c), nil
 }
 
 func updateClusterStatus(cm *agent.ClusterMember, config *agent.Config) {
