@@ -21,6 +21,12 @@ var (
 	ErrClusterJoined = errors.New("agent has already joined the cluster")
 )
 
+// ClusterStatus is the status of the cluster.
+type ClusterStatus struct {
+	Leader    string `json:"leader"`
+	NodeCount int    `json:"node_count"`
+}
+
 // ClusterMember is an agent cluster membership.
 type ClusterMember struct {
 	checkTTL time.Duration
@@ -53,9 +59,9 @@ func NewClusterMember(ctx context.Context, name string, client etcdclient.Client
 }
 
 // Change creates a channel that outputs the current cluster leader.
-func (cm *ClusterMember) Change() chan string {
+func (cm *ClusterMember) Change() chan ClusterStatus {
 	t := time.NewTicker(time.Millisecond * 250)
-	out := make(chan string, 1)
+	out := make(chan ClusterStatus, 1)
 
 	leader := cm.Leader
 
@@ -64,8 +70,11 @@ func (cm *ClusterMember) Change() chan string {
 			select {
 			case <-t.C:
 				if cm.Leader != "" && leader != cm.Leader {
-					leader = cm.Leader
-					out <- leader
+					cs := ClusterStatus{
+						Leader:    cm.Leader,
+						NodeCount: cm.NodeCount,
+					}
+					out <- cs
 				}
 			case <-cm.context.Done():
 				close(out)

@@ -63,10 +63,13 @@ func main() {
 	go func(c *agent.Config) {
 		for {
 			select {
-			case leader := <-el.Change():
-				log.WithField("new-leader", leader).Info("leader changed")
+			case cs := <-el.Change():
+				log.WithFields(log.Fields{
+					"leader":     cs.Leader,
+					"node-count": cs.NodeCount,
+				}).Info("cluster changed")
 				config.Lock()
-				config.Leader = leader
+				config.ClusterStatus = cs
 				config.Unlock()
 			}
 		}
