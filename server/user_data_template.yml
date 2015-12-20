@@ -46,7 +46,50 @@ coreos:
         [Install]
         WantedBy=multi-user.target{{end}}
 
+    - name: dolb-agent-start.service
+      command: start
+      content: |
+        [Unit]
+        Description=Start dolb-agent
+        After=docker.service,etcd2.service,dolb_firewall.service
+        Requires=docker.service,etcd2.service
+
+        [Service]
+        ExecStart=/home/core/units/start-agent.sh
+
 write_files:
+  - path: /home/core/units/start-agent.sh
+    permissions : 0755
+    content: |
+      #!/bin/env bash
+
+      source /etc/environment
+      /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 2&1>/dev/null
+      rc=$?
+      if [[ $rc == 0 ]]; then
+        /usr/bin/fleetctl submit /home/core/units/dolb-agent@.service
+        for i in 1 2 3; do
+          /usr/bin/fleetctl start dolb-agent@$i.service
+        done
+      fi
+
+  - path: /home/core/units/dolb-agent@.service
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=dolb agent
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      TimeoutStartSec=0
+      EnvironmentFile=/etc/environment
+      Environment=AGENT_VERSION={{.AgentVersion}}
+      ExecStart=/usr/bin/docker run -p 8889:8889 --rm  -e AGENT_NAME=dolb-agent-%i -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.1
+      ExecStop=/usr/bin/docker kill dolb-agent-%i
+
+      [X-Fleet]
+      Conflicts=dolb-agent@*.service
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |
