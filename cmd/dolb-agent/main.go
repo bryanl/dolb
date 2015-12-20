@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"math/rand"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -20,6 +20,7 @@ var (
 	addr          = envflag.String("ADDR", ":8889", "listen address")
 	agentName     = envflag.String("AGENT_NAME", "", "name for agent")
 	etcdEndpoints = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
+	doToken       = envflag.String("DIGITALOCEAN_ACCESS_TOKEN", "", "DigitalOcean access token")
 )
 
 func main() {
@@ -29,10 +30,59 @@ func main() {
 		*agentName = generateInstanceID()
 	}
 
+	etcdClient, err := genEtcdClient()
+	if err != nil {
+		log.WithError(err).Fatal("could not create etcd client")
+	}
+
+	ctx := context.Background()
+	cm := agent.NewClusterMember(ctx, *agentName, etcdClient)
+	err = cm.Start()
+	if err != nil {
+		log.WithError(err).Fatal("could not start cluster membership")
+	}
+
+	config := &agent.Config{
+		DigitalOceanToken: *doToken,
+	}
+	go updateClusterStatus(cm, config)
+	api := agent.New(config)
+
+	errChan := make(chan error)
+	go runServer(api, errChan)
+	err = <-errChan
+	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+		log.WithError(err).Panic("unexpected error")
+	}
+}
+
+func runServer(api *agent.API, errChan chan error) {
+	httpServer := graceful.Server{
+		Timeout: 10 * time.Second,
+		Server: &http.Server{
+			Addr:    *addr,
+			Handler: api.Mux,
+		},
+	}
+
+	log.WithField("addr", *addr).Info("starting http listener")
+	errChan <- httpServer.ListenAndServe()
+}
+
+func generateInstanceID() string {
+	strlen := 10
+	rand.Seed(time.Now().UTC().UnixNano())
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, strlen)
+	for i := 0; i < strlen; i++ {
+		result[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(result)
+}
+
+func genEtcdClient() (etcdclient.Client, error) {
 	if *etcdEndpoints == "" {
-		log.Error("missing ETCDENDPOINTS environment variable")
-		envflag.PrintDefaults()
-		os.Exit(1)
+		return nil, errors.New("missing ETCDENDPOINTS environment variable")
 	}
 
 	etcdConfig := etcdclient.Config{
@@ -46,65 +96,20 @@ func main() {
 		etcdConfig.Endpoints = append(etcdConfig.Endpoints, ep)
 	}
 
-	c, err := etcdclient.New(etcdConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ctx := context.Background()
-	el := agent.NewClusterMember(ctx, *agentName, c)
-	err = el.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	config := &agent.Config{}
-
-	go func(c *agent.Config) {
-		for {
-			select {
-			case cs := <-el.Change():
-				log.WithFields(log.Fields{
-					"leader":     cs.Leader,
-					"node-count": cs.NodeCount,
-				}).Info("cluster changed")
-				config.Lock()
-				config.ClusterStatus = cs
-				config.Unlock()
-			}
-		}
-	}(config)
-
-	api := agent.New(config)
-
-	errChan := make(chan error)
-	go func() {
-		httpServer := graceful.Server{
-			Timeout: 10 * time.Second,
-			Server: &http.Server{
-				Addr:    *addr,
-				Handler: api.Mux,
-			},
-		}
-
-		log.WithField("addr", *addr).Info("starting http listener")
-		errChan <- httpServer.ListenAndServe()
-	}()
-
-	err = <-errChan
-	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-		log.WithError(err).Panic("unexpected error")
-	}
-
+	return etcdclient.New(etcdConfig)
 }
 
-func generateInstanceID() string {
-	strlen := 10
-	rand.Seed(time.Now().UTC().UnixNano())
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, strlen)
-	for i := 0; i < strlen; i++ {
-		result[i] = chars[rand.Intn(len(chars))]
+func updateClusterStatus(cm *agent.ClusterMember, config *agent.Config) {
+	for {
+		select {
+		case cs := <-cm.Change():
+			log.WithFields(log.Fields{
+				"leader":     cs.Leader,
+				"node-count": cs.NodeCount,
+			}).Info("cluster changed")
+			config.Lock()
+			config.ClusterStatus = cs
+			config.Unlock()
+		}
 	}
-	return string(result)
 }

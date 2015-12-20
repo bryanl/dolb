@@ -10,8 +10,9 @@ import (
 // Config is configuration for the agent api.
 type Config struct {
 	sync.Mutex
-
 	ClusterStatus ClusterStatus
+
+	DigitalOceanToken string
 }
 
 // API is the http api for the agent.
