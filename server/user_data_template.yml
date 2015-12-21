@@ -64,7 +64,7 @@ write_files:
       #!/bin/bash -x
 
       denv=/home/core/digitalocean.env
-      /usr/bin/grep -q -F 'DROPLET_ID' $denv || echo "DROPLET_ID=\"$(curl http://169.254.169.254/metadata/v1/id)\"" >> $denv
+      /usr/bin/grep -q -F 'DROPLET_ID' $denv || echo "DROPLET_ID=$(curl http://169.254.169.254/metadata/v1/id)" >> $denv
 
       source /etc/environment
       /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 &> /dev/null
@@ -87,8 +87,11 @@ write_files:
 
       [Service]
       TimeoutStartSec=0
+      Restart=always
+      RestartSec=5s
       EnvironmentFile=/etc/environment
       Environment=AGENT_VERSION={{.AgentVersion}}
+      ExecStartPre=/usr/bin/docker pull bryanl/dolb-agent:0.0.2
       ExecStart=/usr/bin/docker run -p 8889:8889 --rm --env-file /home/core/digitalocean.env  -e AGENT_NAME=dolb-agent-%i -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.2
       ExecStop=/usr/bin/docker kill dolb-agent-%i
 
@@ -97,8 +100,8 @@ write_files:
   - path: /home/core/digitalocean.env
     permissions: 0644
     content: |
-      DIGITALOCEAN_ACCESS_TOKEN="{{.BootstrapConfig.DigitalOceanToken}}"
-      AGENT_REGION="{{.BootstrapConfig.Region}}"
+      DIGITALOCEAN_ACCESS_TOKEN={{.BootstrapConfig.DigitalOceanToken}}
+      AGENT_REGION={{.BootstrapConfig.Region}}
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |
@@ -106,7 +109,7 @@ write_files:
 
       timeout=10
 
-      max_attempts=10
+      max_attempts=20
       attempt=0
       etcd_available=0
       while [[ $attempt < $max_attempts ]]; do
@@ -206,14 +209,14 @@ write_files:
       echo "Saving firewall Rules"
       echo "$template" | sudo tee /var/lib/iptables/rules-save > /dev/null
 
-      echo "Enabling iptables service"
+      echo "Enabling iptables service "
       sudo systemctl enable iptables-restore.service
 
       # Flush custom rules before the restore (so this script is idempotent)
-      sudo /usr/sbin/iptables -F Firewall-INPUT 2> /dev/null
+      # sudo /usr/sbin/iptables -F Firewall-INPUT 2> /dev/null
 
-      echo "Loading custom iptables firewall"
-      sudo /sbin/iptables-restore --noflush /var/lib/iptables/rules-save
+      #echo "Loading custom iptables firewall"
+      #sudo /sbin/iptables-restore --noflush /var/lib/iptables/rules-save
 
       echo "Done"
 
