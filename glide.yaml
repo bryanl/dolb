@@ -11,3 +11,4 @@ import:
 - package: github.com/digitalocean/godo
 - package: github.com/vektra/mockery
 - package: github.com/coreos/etcd
+- package: github.com/satori/go.uuid

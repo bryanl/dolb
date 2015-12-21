@@ -1,8 +1,6 @@
 package agent
 
-import (
-	log "github.com/Sirupsen/logrus"
-)
+import log "github.com/Sirupsen/logrus"
 
 // Agent is the load balancer agent. It controlls all things load balancer.
 type Agent struct {
@@ -35,6 +33,12 @@ func (a *Agent) PollClusterStatus() {
 			}).Info("cluster changed")
 			a.Config.Lock()
 			a.Config.ClusterStatus = cs
+
+			resp, err := a.Config.KeysAPI.Get(a.Config.Context, fipKey, nil)
+			if err == nil {
+				a.Config.ClusterStatus.FloatingIP = resp.Node.Value
+			}
+
 			a.Config.Unlock()
 
 			if cs.IsLeader {
@@ -43,6 +47,8 @@ func (a *Agent) PollClusterStatus() {
 				if err != nil {
 					log.WithError(err).Error("could not retrieve floating ip for agent")
 				}
+
+				a.Config.ClusterStatus.FloatingIP = ip
 
 				log.WithField("cluster-ip", ip).Info("retrieved cluster ip")
 			}

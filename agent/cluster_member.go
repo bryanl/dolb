@@ -27,9 +27,10 @@ var (
 
 // ClusterStatus is the status of the cluster.
 type ClusterStatus struct {
-	Leader    string `json:"leader"`
-	NodeCount int    `json:"node_count"`
-	IsLeader  bool   `json:"is_leader"`
+	FloatingIP string `json:"floating_ip"`
+	Leader     string `json:"leader"`
+	IsLeader   bool   `json:"is_leader"`
+	NodeCount  int    `json:"node_count"`
 }
 
 // ClusterMember is an agent cluster membership.
