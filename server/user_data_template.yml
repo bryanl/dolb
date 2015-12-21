@@ -27,12 +27,11 @@ coreos:
 
         [Service]
         TimeoutStartSec=0
-        Type=oneshot
-        RemainAfterExit=yes
         ExecStart=/root/bin/fixup_firewall.sh
     {{if .BootstrapConfig.HasSyslog}}- name: remote_syslog.service
       command: start
       content: |
+        [Unit]
         Description=Remote Syslog
         After=systemd-journald.service
         Requires=systemd-journald.service
@@ -51,20 +50,24 @@ coreos:
       content: |
         [Unit]
         Description=Start dolb-agent
-        After=docker.service,etcd2.service,dolb_firewall.service
-        Requires=docker.service,etcd2.service
+        After=docker.service etcd2.service dolb_firewall.service
+        Requires=docker.service etcd2.service
 
         [Service]
+        TimeoutStartSec=0
         ExecStart=/home/core/units/start-agent.sh
 
 write_files:
   - path: /home/core/units/start-agent.sh
     permissions : 0755
     content: |
-      #!/bin/env bash
+      #!/bin/bash -x
+
+      denv=/home/core/digitalocean.env
+      /usr/bin/grep -q -F 'DROPLET_ID' $denv || echo "DROPLET_ID=\"$(curl http://169.254.169.254/metadata/v1/id)\"" >> $denv
 
       source /etc/environment
-      /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 2&1>/dev/null
+      /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 &> /dev/null
       rc=$?
       if [[ $rc == 0 ]]; then
         /usr/bin/fleetctl submit /home/core/units/dolb-agent@.service
@@ -72,6 +75,7 @@ write_files:
           /usr/bin/fleetctl start dolb-agent@$i.service
         done
       fi
+
 
   - path: /home/core/units/dolb-agent@.service
     permissions: 0644
@@ -98,7 +102,7 @@ write_files:
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |
-      #!/bin/env bash
+      #!/bin/bash -x
 
       timeout=10
 
