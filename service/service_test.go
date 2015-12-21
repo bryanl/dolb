@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,12 +38,16 @@ func TestResponse_MarshalJSON_Error(t *testing.T) {
 	assert.Equal(t, "error", m["error"])
 }
 
+type testLogger struct{}
+
+func (tl *testLogger) SetLogger(*logrus.Entry) {}
+
 func TestHandler_ServeHTTP(t *testing.T) {
 	h := &Handler{
 		F: func(config interface{}, r *http.Request) Response {
 			return Response{Status: http.StatusOK}
 		},
-		Config: struct{}{},
+		Config: &testLogger{},
 	}
 
 	req, err := http.NewRequest("POST", "http://example.com/lb", nil)

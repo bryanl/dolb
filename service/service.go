@@ -6,6 +6,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/satori/go.uuid"
 )
 
 // HandlerFunc is a handler function that returns a Response.
@@ -30,13 +31,23 @@ func (r *Response) MarshalJSON() ([]byte, error) {
 // Handler is a handler for a http request.
 type Handler struct {
 	F      HandlerFunc
-	Config interface{}
+	Config HandlerConfig
+}
+
+type HandlerConfig interface {
+	SetLogger(*log.Entry)
 }
 
 // ServeHTTP services a http request. It calls the appropriate handler,
 // logs the request, and encodes the response.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
+	u := uuid.NewV4()
+
+	logger := log.WithFields(log.Fields{
+		"request-id": u,
+	})
+	h.Config.SetLogger(logger)
 
 	w.Header().Set("Content-Type", "application/json")
 	resp := h.F(h.Config, r)
@@ -45,7 +56,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(&resp)
 
 	totalTime := time.Now().Sub(now)
-	log.WithFields(log.Fields{
+	logger.WithFields(log.Fields{
+		"action":            "web-service",
 		"method":            r.Method,
 		"url":               r.URL.String(),
 		"remote_addr":       r.RemoteAddr,

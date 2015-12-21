@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/service"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/gorilla/mux"
@@ -21,6 +22,12 @@ type Config struct {
 	KeysAPI           etcdclient.KeysAPI
 	Name              string
 	Region            string
+
+	logger *logrus.Entry
+}
+
+func (c *Config) SetLogger(l *logrus.Entry) {
+	c.logger = l
 }
 
 // API is the http api for the agent.
