@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
@@ -22,7 +23,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	var bc BootstrapConfig
 	err := json.NewDecoder(r.Body).Decode(&bc)
 	if err != nil {
-		return service.Response{Body: err, Status: 422}
+		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
 	}
 
 	if bc.DigitalOceanToken == "" {
