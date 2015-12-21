@@ -29,6 +29,7 @@ var (
 type ClusterStatus struct {
 	Leader    string `json:"leader"`
 	NodeCount int    `json:"node_count"`
+	IsLeader  bool   `json:"is_leader"`
 }
 
 // ClusterMember is an agent cluster membership.
@@ -83,6 +84,7 @@ func (cm *ClusterMember) Change() chan ClusterStatus {
 			case <-t.C:
 				if cm.Leader != "" && leader != cm.Leader {
 					cs := ClusterStatus{
+						IsLeader:  cm.Leader == cm.name,
 						Leader:    cm.Leader,
 						NodeCount: cm.NodeCount,
 					}

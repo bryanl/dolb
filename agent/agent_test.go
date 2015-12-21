@@ -56,9 +56,10 @@ func TestClusterMember_Change(t *testing.T) {
 
 		csChan := cm.Change()
 
-		go func() { cm.Leader = "new-leader" }()
+		go func() { cm.Leader = cm.name }()
 		cs := <-csChan
-		assert.Equal(t, "new-leader", cs.Leader)
+		assert.Equal(t, cm.name, cs.Leader)
+		assert.True(t, cs.IsLeader)
 
 		fn()
 	})
