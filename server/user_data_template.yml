@@ -85,7 +85,7 @@ write_files:
       TimeoutStartSec=0
       EnvironmentFile=/etc/environment
       Environment=AGENT_VERSION={{.AgentVersion}}
-      ExecStart=/usr/bin/docker run -p 8889:8889 --rm --env-file /home/core/digitalocean.env  -e AGENT_NAME=dolb-agent-%i -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.1
+      ExecStart=/usr/bin/docker run -p 8889:8889 --rm --env-file /home/core/digitalocean.env  -e AGENT_NAME=dolb-agent-%i -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.2
       ExecStop=/usr/bin/docker kill dolb-agent-%i
 
       [X-Fleet]
