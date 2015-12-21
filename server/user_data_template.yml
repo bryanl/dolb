@@ -94,6 +94,7 @@ write_files:
     permissions: 0644
     content: |
       DIGITALOCEAN_ACCESS_TOKEN="{{.BootstrapConfig.DigitalOceanToken}}"
+      AGENT_REGION="{{.BootstrapConfig.Region}}"
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |

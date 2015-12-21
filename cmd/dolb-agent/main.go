@@ -18,8 +18,10 @@ import (
 
 var (
 	addr          = envflag.String("ADDR", ":8889", "listen address")
-	agentName     = envflag.String("AGENT_NAME", "", "name for agent")
+	agentName     = envflag.String("AGENT_NAME", "", "agent name")
+	agentRegion   = envflag.String("AGENT_REGION", "", "agent DigitalOcean region")
 	etcdEndpoints = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
+	dropletID     = envflag.String("DROPLET_ID", "", "current droplet id")
 	doToken       = envflag.String("DIGITALOCEAN_ACCESS_TOKEN", "", "DigitalOcean access token")
 )
 
@@ -30,23 +32,38 @@ func main() {
 		*agentName = generateInstanceID()
 	}
 
+	if *agentRegion == "" {
+		log.Fatal("invalid AGENT_REGION environment variable")
+	}
+
+	if *dropletID == "" {
+		log.Fatal("invalid DROPLET_ID environment variable")
+	}
+
+	config := &agent.Config{
+		DigitalOceanToken: *doToken,
+		Context:           context.Background(),
+		DropletID:         *dropletID,
+		Region:            *agentRegion,
+	}
+
 	kapi, err := genKeysAPI()
 	if err != nil {
 		log.WithError(err).Fatal("could not create keys api client")
 	}
 
-	ctx := context.Background()
-	cm := agent.NewClusterMember(ctx, *agentName, kapi)
+	config.KeysAPI = kapi
+
+	cm := agent.NewClusterMember(*agentName, config)
 	err = cm.Start()
 	if err != nil {
 		log.WithError(err).Fatal("could not start cluster membership")
 	}
 
-	config := &agent.Config{
-		DigitalOceanToken: *doToken,
-	}
-	go updateClusterStatus(cm, config)
-	api := agent.New(config)
+	a := agent.New(cm, config)
+	go a.PollClusterStatus()
+
+	api := agent.NewAPI(config)
 
 	errChan := make(chan error)
 	go runServer(api, errChan)
@@ -102,19 +119,4 @@ func genKeysAPI() (etcdclient.KeysAPI, error) {
 	}
 
 	return etcdclient.NewKeysAPI(c), nil
-}
-
-func updateClusterStatus(cm *agent.ClusterMember, config *agent.Config) {
-	for {
-		select {
-		case cs := <-cm.Change():
-			log.WithFields(log.Fields{
-				"leader":     cs.Leader,
-				"node-count": cs.NodeCount,
-			}).Info("cluster changed")
-			config.Lock()
-			config.ClusterStatus = cs
-			config.Unlock()
-		}
-	}
 }

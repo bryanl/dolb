@@ -48,12 +48,6 @@ func TestBoostrapConfig_HasSyslog(t *testing.T) {
 	assert.True(t, bc.HasSyslog())
 }
 
-func TestTokenSource(t *testing.T) {
-	ts := TokenSource{AccessToken: "token"}
-	_, err := ts.Token()
-	assert.NoError(t, err)
-}
-
 func TestNewClusterOps(t *testing.T) {
 	co := NewClusterOps()
 	assert.NotNil(t, co)
@@ -178,11 +172,6 @@ func TestUserData(t *testing.T) {
 	assert.Equal(t, bc.Region, m["region"])
 	assert.Equal(t, bc.RemoteSyslog.Host, m["log.host"])
 	assert.Equal(t, strconv.Itoa(bc.RemoteSyslog.Port), m["log.port"])
-}
-
-func Test_godoClientFactory(t *testing.T) {
-	gc := godoClientFactory("test-token")
-	assert.NotNil(t, gc)
 }
 
 func Test_generateInstanceID(t *testing.T) {

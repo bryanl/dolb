@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_New(t *testing.T) {
+func Test_NewAPI(t *testing.T) {
 	c := &Config{}
-	api := New(c)
+	api := NewAPI(c)
 	assert.NotNil(t, api)
 }
