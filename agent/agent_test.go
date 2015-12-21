@@ -7,8 +7,9 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	config := &Config{}
+	config := &Config{DigitalOceanToken: "12345"}
 	cm := &ClusterMember{}
-	a := New(cm, config)
+	a, err := New(cm, config)
+	assert.NoError(t, err)
 	assert.NotNil(t, a)
 }

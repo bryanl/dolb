@@ -19,6 +19,7 @@ type Config struct {
 	DigitalOceanToken string
 	DropletID         string
 	KeysAPI           etcdclient.KeysAPI
+	Name              string
 	Region            string
 }
 

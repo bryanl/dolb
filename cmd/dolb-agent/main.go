@@ -45,6 +45,7 @@ func main() {
 		Context:           context.Background(),
 		DropletID:         *dropletID,
 		Region:            *agentRegion,
+		Name:              *agentName,
 	}
 
 	kapi, err := genKeysAPI()
@@ -60,7 +61,11 @@ func main() {
 		log.WithError(err).Fatal("could not start cluster membership")
 	}
 
-	a := agent.New(cm, config)
+	a, err := agent.New(cm, config)
+	if err != nil {
+		log.WithError(err).Fatal("could not create agent")
+	}
+
 	go a.PollClusterStatus()
 
 	api := agent.NewAPI(config)

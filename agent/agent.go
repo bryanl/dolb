@@ -12,12 +12,16 @@ type Agent struct {
 }
 
 // New creates a load balancer agent.
-func New(cm *ClusterMember, config *Config) *Agent {
+func New(cm *ClusterMember, config *Config) (*Agent, error) {
+	fim, err := NewFloatingIPManager(config)
+	if err != nil {
+		return nil, err
+	}
 	return &Agent{
 		ClusterMember:     cm,
 		Config:            config,
-		FloatingIPManager: NewFloatingIPManager(config),
-	}
+		FloatingIPManager: fim,
+	}, nil
 }
 
 // PollClusterStatus polls cluster status to see if this node is the leader.
@@ -35,9 +39,9 @@ func (a *Agent) PollClusterStatus() {
 
 			if cs.IsLeader {
 				// handle floating ip
-				ip, err := a.FloatingIPManager.Reserve(cs)
+				ip, err := a.FloatingIPManager.Reserve()
 				if err != nil {
-					log.WithError(err).Error("could not retrieving floating ip for agent")
+					log.WithError(err).Error("could not retrieve floating ip for agent")
 				}
 
 				log.WithField("cluster-ip", ip).Info("retrieved cluster ip")
