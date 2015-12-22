@@ -52,8 +52,11 @@ coreos:
         Description=Start dolb-agent
         After=docker.service
         After=etcd2.service
+        After=fleet.service
         After=dolb_firewall.service
-        Requires=docker.service etcd2.service 
+        Requires=docker.service
+        Requires=etcd2.service 
+        Requires=fleet.service
 
         [Service]
         Type=oneshot
@@ -72,6 +75,10 @@ write_files:
 
       until [[ $(curl -s http://localhost:4001/v2/members | jq '.[] | .[].peerURLs | length' | wc -l) == "3" ]]; do sleep 2; done
       echo "... etcd up"
+      sleep 5
+
+      until [[ $(fleetctl list-machines | wc -l) == "4" ]]; do sleep 2; done
+      echo "... fleet up"
 
       /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 &> /dev/null
       rc=$?
@@ -108,6 +115,7 @@ write_files:
       DIGITALOCEAN_ACCESS_TOKEN={{.BootstrapConfig.DigitalOceanToken}}
       AGENT_REGION={{.BootstrapConfig.Region}}
       SERVER_URL={{.ServerURL}}
+      CLUSTER_NAME={{.BootstrapConfig.Name}}
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |

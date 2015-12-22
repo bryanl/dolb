@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/do"
@@ -13,12 +14,18 @@ import (
 )
 
 var (
-	fipKey        = "/agent/floating_ip"
-	fipDropletKey = "/agent/floating_ip_droplet"
+	fipKey            = "/agent/floating_ip"
+	fipDropletKey     = "/agent/floating_ip_droplet"
+	actionPollTimeout = time.Second
 )
 
 // FloatingIPManager manages DigitalOcean floating ips for the agent.
-type FloatingIPManager struct {
+type FloatingIPManager interface {
+	Reserve() (string, error)
+}
+
+// floatingIPManager manages DigitalOcean floating ips for the agent.
+type floatingIPManager struct {
 	context    context.Context
 	dropletID  string
 	godoClient *godo.Client
@@ -26,12 +33,14 @@ type FloatingIPManager struct {
 	locker     Locker
 	name       string
 
-	assignNewIP func(*FloatingIPManager) (string, error)
-	existingIP  func(*FloatingIPManager) (string, error)
+	assignNewIP func(*floatingIPManager) (string, error)
+	existingIP  func(*floatingIPManager) (string, error)
 }
 
+var _ FloatingIPManager = &floatingIPManager{}
+
 // NewFloatingIPManager creates a FloatingIPManager.
-func NewFloatingIPManager(config *Config) (*FloatingIPManager, error) {
+func NewFloatingIPManager(config *Config) (*floatingIPManager, error) {
 	if config.DigitalOceanToken == "" {
 		return nil, errors.New("requires DigitalOceanToken")
 	}
@@ -43,7 +52,7 @@ func NewFloatingIPManager(config *Config) (*FloatingIPManager, error) {
 		kapi:    config.KeysAPI,
 	}
 
-	return &FloatingIPManager{
+	return &floatingIPManager{
 		context:    config.Context,
 		dropletID:  config.DropletID,
 		godoClient: do.GodoClientFactory(config.DigitalOceanToken),
@@ -56,7 +65,7 @@ func NewFloatingIPManager(config *Config) (*FloatingIPManager, error) {
 }
 
 // Reserve reserves a floating ip.
-func (fim *FloatingIPManager) Reserve() (string, error) {
+func (fim *floatingIPManager) Reserve() (string, error) {
 	ip, err := fim.existingIP(fim)
 	if err != nil {
 		if eerr, ok := err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeKeyNotFound {
@@ -97,8 +106,15 @@ func (fim *FloatingIPManager) Reserve() (string, error) {
 			return "", err
 		}
 
+		actionID := action.ID
+
 	ACTION_CHECK:
 		for {
+			action, _, err := fim.godoClient.FloatingIPActions.Get(ip, actionID)
+			if err != nil {
+				return "", fmt.Errorf("could not poll action progress: %v", err)
+			}
+
 			switch action.Status {
 			case "completed":
 				break ACTION_CHECK
@@ -109,13 +125,15 @@ func (fim *FloatingIPManager) Reserve() (string, error) {
 			default:
 				return "", fmt.Errorf("unknown action status when assigning ip: %v", action.Status)
 			}
+
+			time.Sleep(time.Second)
 		}
 	}
 
 	return ip, nil
 }
 
-func existingIP(fim *FloatingIPManager) (string, error) {
+func existingIP(fim *floatingIPManager) (string, error) {
 	resp, err := fim.kapi.Get(fim.context, fipKey, nil)
 	if err != nil {
 		return "", err
@@ -124,7 +142,7 @@ func existingIP(fim *FloatingIPManager) (string, error) {
 	return resp.Node.Value, nil
 }
 
-func assignNewIP(fim *FloatingIPManager) (string, error) {
+func assignNewIP(fim *floatingIPManager) (string, error) {
 	id, err := fim.dropletIDInt()
 	if err != nil {
 		return "", err
@@ -146,6 +164,6 @@ func assignNewIP(fim *FloatingIPManager) (string, error) {
 	return fip.IP, nil
 }
 
-func (fim *FloatingIPManager) dropletIDInt() (int, error) {
+func (fim *floatingIPManager) dropletIDInt() (int, error) {
 	return strconv.Atoi(fim.dropletID)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/service"
 )
 
@@ -35,6 +36,11 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 		config.logger.WithError(err).Error("could not bootstrap cluster")
 		return service.Response{Body: err, Status: 400}
 	}
+
+	config.logger.WithFields(logrus.Fields{
+		"cluster-name":   bc.Name,
+		"cluster-region": bc.Region,
+	}).Info("created load balancer")
 
 	bcResp := BootstrapClusterResponse{
 		ID:         bc.Name,

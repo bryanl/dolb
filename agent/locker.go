@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Locker locks and blocks until it is unlocked.
 type Locker interface {
 	Lock() error
 	Unlock() error

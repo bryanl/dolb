@@ -44,6 +44,7 @@ func New(config *Config) (*API, error) {
 	}
 
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
+	a.Mux.Handle("/register", service.Handler{Config: config, F: RegisterHandler}).Methods("POST")
 
 	return a, nil
 }

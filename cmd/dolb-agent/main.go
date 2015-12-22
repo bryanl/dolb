@@ -20,9 +20,11 @@ var (
 	addr          = envflag.String("ADDR", ":8889", "listen address")
 	agentName     = envflag.String("AGENT_NAME", "", "agent name")
 	agentRegion   = envflag.String("AGENT_REGION", "", "agent DigitalOcean region")
+	clusterName   = envflag.String("CLUSTER_NAME", "", "cluster name")
 	etcdEndpoints = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
 	dropletID     = envflag.String("DROPLET_ID", "", "current droplet id")
 	doToken       = envflag.String("DIGITALOCEAN_ACCESS_TOKEN", "", "DigitalOcean access token")
+	serverURL     = envflag.String("SERVER_URL", "", "DOLB Server URL")
 )
 
 func main() {
@@ -36,17 +38,29 @@ func main() {
 		log.Fatal("invalid AGENT_REGION environment variable")
 	}
 
+	if *clusterName == "" {
+		log.Fatal("invalid CLUSTER_NAME environment variable")
+	}
+
 	if *dropletID == "" {
 		log.Fatal("invalid DROPLET_ID environment variable")
 	}
 
+	if *serverURL == "" {
+		log.Fatal("invalid SERVER_URL environment variable")
+	}
+
 	config := &agent.Config{
 		DigitalOceanToken: *doToken,
+		ClusterName:       *clusterName,
 		Context:           context.Background(),
 		DropletID:         *dropletID,
 		Region:            *agentRegion,
 		Name:              *agentName,
+		ServerURL:         *serverURL,
 	}
+
+	config.SetLogger(log.WithField("agent-name", *agentName))
 
 	kapi, err := genKeysAPI()
 	if err != nil {

@@ -17,15 +17,18 @@ type Config struct {
 	ClusterStatus ClusterStatus
 
 	Context           context.Context
+	ClusterName       string
 	DigitalOceanToken string
 	DropletID         string
 	KeysAPI           etcdclient.KeysAPI
 	Name              string
 	Region            string
+	ServerURL         string
 
 	logger *logrus.Entry
 }
 
+// SetLogger sets the logger for Config.
 func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
 }

@@ -140,12 +140,13 @@ func TestUserData(t *testing.T) {
 	defer func(udt string) { userDataTemplate = udt }(userDataTemplate)
 
 	mT := map[string]string{
-		"token":      "{{.CoreosToken}}",
-		"region":     "{{.BootstrapConfig.Region}}",
-		"do_token":   "{{.BootstrapConfig.DigitalOceanToken}}",
-		"server_url": "{{.ServerURL}}",
-		"log.host":   "{{.BootstrapConfig.RemoteSyslog.Host}}",
-		"log.port":   "{{.BootstrapConfig.RemoteSyslog.Port}}",
+		"token":          "{{.CoreosToken}}",
+		"region":         "{{.BootstrapConfig.Region}}",
+		"do_token":       "{{.BootstrapConfig.DigitalOceanToken}}",
+		"cluster_config": "{{.BootstrapConfig.Name}}",
+		"server_url":     "{{.ServerURL}}",
+		"log.host":       "{{.BootstrapConfig.RemoteSyslog.Host}}",
+		"log.port":       "{{.BootstrapConfig.RemoteSyslog.Port}}",
 	}
 
 	b, err := json.Marshal(&mT)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,6 +18,7 @@ func Test_LBCreateHandler(t *testing.T) {
 		ClusterOpsFactory: func() ClusterOps {
 			return clusterOpsMock
 		},
+		logger: logrus.WithField("test", "test"),
 	}
 
 	body := []byte(`{"name": "lb-1", "region": "dev0", "ssh_keys": ["12345"], "digitalocean_token": "do-token"}`)
