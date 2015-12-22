@@ -50,23 +50,28 @@ coreos:
       content: |
         [Unit]
         Description=Start dolb-agent
-        After=docker.service etcd2.service dolb_firewall.service
-        Requires=docker.service etcd2.service
+        After=docker.service
+        After=etcd2.service
+        After=dolb_firewall.service
+        Requires=docker.service etcd2.service 
 
         [Service]
-        TimeoutStartSec=0
+        Type=oneshot
         ExecStart=/home/core/units/start-agent.sh
 
 write_files:
   - path: /home/core/units/start-agent.sh
     permissions : 0755
     content: |
-      #!/bin/bash -x
+      #!/bin/bash
 
       denv=/home/core/digitalocean.env
       /usr/bin/grep -q -F 'DROPLET_ID' $denv || echo "DROPLET_ID=$(curl http://169.254.169.254/metadata/v1/id)" >> $denv
-
       source /etc/environment
+
+      until [[ $(curl -s http://localhost:4001/v2/members | jq '.[] | .[].peerURLs | length' | wc -l) == "3" ]]; do sleep 2; done
+      echo "... etcd up"
+
       /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 &> /dev/null
       rc=$?
       if [[ $rc == 0 ]]; then
@@ -75,7 +80,6 @@ write_files:
           /usr/bin/fleetctl start dolb-agent@$i.service
         done
       fi
-
 
   - path: /home/core/units/dolb-agent@.service
     permissions: 0644
@@ -105,54 +109,15 @@ write_files:
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |
-      #!/bin/bash -x
+      #!/bin/bash
 
-      timeout=10
+      until [[ $(curl -s http://localhost:4001/v2/members | jq '.[] | .[].peerURLs | length' | wc -l) == "3" ]]; do sleep 2; done
+      echo "... etcd up"
 
-      max_attempts=20
-      attempt=0
-      etcd_available=0
-      while [[ $attempt < $max_attempts ]]; do
-        # obtain the etcd node members and check that at least there is three
-        ETCD_NODES=$(curl -s http://localhost:4001/v2/members | jq '.[] | .[].peerURLs | length' | wc -l)
-        if test $ETCD_NODES -lt 3; then
-          echo "etcd is not working correctly. Verify the etcd cluster is running before the execution of this script."
-        else
-          etcd_available=1
-          break
-        fi
+      sleep 5
 
-        echo "Retrying in $timeout..." 1>&2
-        sleep $timeout
-        attempt=$(( attempt + 1 ))
-        timeout=$(( timeout * 2 ))
-      done
-
-      if [[ $etcd_available != 1 ]]; then
-        echo "Timed out waiting for etcd to be availble. Exiting..."
-        exit 1
-      fi
-
-      attempt=0
-      fleetctl_available=0
-      while [[ $attempt < $max_attempts ]]; do
-        fleetct=$(fleetctl list-machines | wc -l)
-        if test $fleetct -lt 4; then
-          echo "Waiting for fleet to become available"
-        else
-          fleetctl_available=1
-          break
-        fi
-        echo "Retrying in $timeout..." 1>&2
-        sleep $timeout
-        attempt=$(( attempt + 1 ))
-        timeout=$(( timeout * 2 ))
-      done
-
-      if [[ $fleetctl_available != 1 ]]; then
-        echo "Timed out waiting for fleet to be availble. Exiting..."
-        exit 1
-      fi
+      until [[ $(fleetctl list-machines | wc -l) == "4" ]]; do sleep 2; done
+      echo "... fleet up"
 
       echo "Obtaining IP addresses of the nodes in the cluster..."
       MACHINES_IP=$(fleetctl list-machines --fields=ip --no-legend | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
@@ -202,10 +167,6 @@ write_files:
       EOF
       )
 
-      if [[ -z "$DEBUG" ]]; then
-        echo "$template"
-      fi
-
       echo "Saving firewall Rules"
       echo "$template" | sudo tee /var/lib/iptables/rules-save > /dev/null
 
@@ -213,10 +174,10 @@ write_files:
       sudo systemctl enable iptables-restore.service
 
       # Flush custom rules before the restore (so this script is idempotent)
-      # sudo /usr/sbin/iptables -F Firewall-INPUT 2> /dev/null
+      sudo /usr/sbin/iptables -F Firewall-INPUT 2> /dev/null
 
       #echo "Loading custom iptables firewall"
-      #sudo /sbin/iptables-restore --noflush /var/lib/iptables/rules-save
+      sudo /sbin/iptables-restore --noflush /var/lib/iptables/rules-save
 
       echo "Done"
 
