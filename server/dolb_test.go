@@ -8,6 +8,8 @@ import (
 )
 
 func Test_New(t *testing.T) {
-	api := New()
+	c := NewConfig("http://example.com")
+	api, err := New(c)
+	assert.NoError(t, err)
 	assert.NotNil(t, api)
 }

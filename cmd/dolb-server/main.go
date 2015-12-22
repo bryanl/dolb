@@ -12,13 +12,22 @@ import (
 )
 
 var (
-	addr = envflag.String("ADDR", ":8888", "listen address")
+	addr      = envflag.String("ADDR", ":8888", "listen address")
+	serverURL = envflag.String("SERVER_URL", "", "URL for this service")
 )
 
 func main() {
 	envflag.Parse()
 
-	api := server.New()
+	if *serverURL == "" {
+		log.Fatal("SERVER_URL environment variable is required")
+	}
+
+	c := server.NewConfig(*serverURL)
+	api, err := server.New(c)
+	if err != nil {
+		log.WithError(err).Fatal("could not create Api")
+	}
 
 	errChan := make(chan error)
 	go func() {
@@ -30,11 +39,14 @@ func main() {
 			},
 		}
 
-		log.WithField("addr", *addr).Info("starting http listener")
+		log.WithFields(log.Fields{
+			"addr":       *addr,
+			"server-url": *serverURL,
+		}).Info("starting http listener")
 		errChan <- httpServer.ListenAndServe()
 	}()
 
-	err := <-errChan
+	err = <-errChan
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 		log.WithError(err).Panic("unexpected error")
 	}

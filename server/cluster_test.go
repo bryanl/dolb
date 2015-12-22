@@ -99,7 +99,9 @@ func TestBootstrap(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		uri, err := co.Bootstrap(bc)
+		su := "http://example.com"
+
+		uri, err := co.Bootstrap(bc, su)
 		assert.NoError(t, err)
 		assert.Equal(t, "http://example.com/actions/1234", uri)
 	})
@@ -113,7 +115,8 @@ func TestBootstrap_MissingName(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		_, err := co.Bootstrap(bc)
+		su := "http://example.com"
+		_, err := co.Bootstrap(bc, su)
 		assert.Error(t, err)
 	})
 }
@@ -137,11 +140,12 @@ func TestUserData(t *testing.T) {
 	defer func(udt string) { userDataTemplate = udt }(userDataTemplate)
 
 	mT := map[string]string{
-		"token":    "{{.CoreosToken}}",
-		"region":   "{{.BootstrapConfig.Region}}",
-		"do_token": "{{.BootstrapConfig.DigitalOceanToken}}",
-		"log.host": "{{.BootstrapConfig.RemoteSyslog.Host}}",
-		"log.port": "{{.BootstrapConfig.RemoteSyslog.Port}}",
+		"token":      "{{.CoreosToken}}",
+		"region":     "{{.BootstrapConfig.Region}}",
+		"do_token":   "{{.BootstrapConfig.DigitalOceanToken}}",
+		"server_url": "{{.ServerURL}}",
+		"log.host":   "{{.BootstrapConfig.RemoteSyslog.Host}}",
+		"log.port":   "{{.BootstrapConfig.RemoteSyslog.Port}}",
 	}
 
 	b, err := json.Marshal(&mT)
@@ -160,7 +164,8 @@ func TestUserData(t *testing.T) {
 	}
 
 	co := &clusterOps{}
-	userData, err := co.userData(token, bc)
+	su := "http://example.com"
+	userData, err := co.userData(token, su, bc)
 	assert.NoError(t, err)
 
 	fmt.Println(userData)

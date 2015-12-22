@@ -15,6 +15,7 @@ func New(cm *ClusterMember, config *Config) (*Agent, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Agent{
 		ClusterMember:     cm,
 		Config:            config,

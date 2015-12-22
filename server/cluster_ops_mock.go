@@ -8,8 +8,8 @@ type ClusterOpsMock struct {
 }
 
 // Bootstrap is a mock for ClusterOps.Bootstrap.
-func (_m *ClusterOpsMock) Bootstrap(bc *BootstrapConfig) (string, error) {
-	ret := _m.Called(bc)
+func (_m *ClusterOpsMock) Bootstrap(bc *BootstrapConfig, su string) (string, error) {
+	ret := _m.Called(bc, su)
 
 	var r0 string
 	if rf, ok := ret.Get(0).(func(*BootstrapConfig) string); ok {
