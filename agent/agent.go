@@ -10,6 +10,10 @@ import (
 	"github.com/bryanl/dolb/server"
 )
 
+var (
+	haproxyDiscoverKey = "/haproxy-discover/services"
+)
+
 // Agent is the load balancer agent. It controlls all things load balancer.
 type Agent struct {
 	ClusterMember     *ClusterMember
@@ -91,6 +95,14 @@ func (a *Agent) PollClusterStatus() {
 			a.Config.Unlock()
 
 			if cs.IsLeader {
+				ek := newEtcdKVS(a.Config.Context, a.Config.KeysAPI)
+				hkvs := newHaproxyKVS(ek)
+
+				err := hkvs.Init()
+				if err != nil {
+					log.WithError(err).Error("could not create haproxy keys")
+				}
+
 				handleLeaderElection(a)
 			}
 		}
