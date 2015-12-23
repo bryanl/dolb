@@ -83,9 +83,10 @@ write_files:
       /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 &> /dev/null
       rc=$?
       if [[ $rc == 0 ]]; then
-        /usr/bin/fleetctl submit /home/core/units/dolb-agent@.service
+        /usr/bin/fleetctl submit /home/core/units/dolb-agent@.service /home/core/units/haproxy-confd@.service
         for i in 1 2 3; do
           /usr/bin/fleetctl start dolb-agent@$i.service
+          /usr/bin/fleetctl start haproxy-confd@$i.service
         done
       fi
 
@@ -99,16 +100,39 @@ write_files:
 
       [Service]
       TimeoutStartSec=0
+      KillMode=none
       Restart=always
       RestartSec=5s
       EnvironmentFile=/etc/environment
       Environment=AGENT_VERSION={{.AgentVersion}}
       ExecStartPre=/usr/bin/docker pull bryanl/dolb-agent:0.0.2
+      ExecStartPre=-/usr/bin/docker kill dolb-agent-%i
       ExecStart=/usr/bin/docker run -p 8889:8889 --rm --env-file /home/core/digitalocean.env -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.2
       ExecStop=/usr/bin/docker kill dolb-agent-%i
 
       [X-Fleet]
       Conflicts=dolb-agent@*.service
+  - path: /home/core/units/haproxy-confd@.service
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=haproxy service
+      After=docker.service
+      After=dolb-agent-start.service
+      Requires=docker.service
+
+      [Service]
+      TimeoutStartSec=0
+      KillMode=none
+      Restart=always
+      RestartSec=5s
+      EnvironmentFile=/etc/environment
+      ExecStartPre=-/usr/bin/docker kill haproxy-confd-%i
+      ExecStartPre=/usr/bin/docker pull bryanl/dolb-haproxy-confd:0.0.2
+      ExecStart=/usr/bin/docker run --rm --net=host -e ETCD_NODE=${COREOS_PRIVATE_IPV4}:4001 -p 1000:1000 --name haproxy-confd-%i bryanl/dolb-haproxy-confd:0.0.2
+
+      [X-Fleet]
+      Conflicts=haproxy-confd@*.service
   - path: /home/core/digitalocean.env
     permissions: 0644
     content: |
