@@ -1,7 +1,12 @@
 FROM golang:1.5.2
+
+MAINTAINER Bryan Liles <bryanliles@gmail.com>
+
+EXPOSE 8889
+
 ADD . /go/src/github.com/bryanl/dolb
 ENV GO15VENDOREXPERIMENT=1
 RUN go install github.com/bryanl/dolb/cmd/dolb-agent
 ENTRYPOINT /go/bin/dolb-agent
-EXPOSE 8889
+
 
