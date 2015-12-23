@@ -7,7 +7,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/service"
-	etcdclient "github.com/coreos/etcd/client"
 	"github.com/gorilla/mux"
 )
 
@@ -20,7 +19,7 @@ type Config struct {
 	ClusterName       string
 	DigitalOceanToken string
 	DropletID         string
-	KeysAPI           etcdclient.KeysAPI
+	KVS               KVS
 	Name              string
 	Region            string
 	ServerURL         string

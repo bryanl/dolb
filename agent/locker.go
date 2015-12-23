@@ -18,15 +18,15 @@ type etcdLocker struct {
 	context context.Context
 	key     string
 	who     string
-	kapi    etcdclient.KeysAPI
+	kvs     KVS
 }
 
-func newEtcdLocker(context context.Context, key, who string, kapi etcdclient.KeysAPI) *etcdLocker {
+func newEtcdLocker(context context.Context, key, who string, kvs KVS) *etcdLocker {
 	return &etcdLocker{
 		context: context,
 		key:     key,
 		who:     who,
-		kapi:    kapi,
+		kvs:     kvs,
 	}
 }
 
@@ -34,8 +34,7 @@ var _ Locker = &etcdLocker{}
 
 func (el *etcdLocker) Lock() error {
 	for {
-		opts := &etcdclient.GetOptions{}
-		_, err := el.kapi.Get(el.context, el.lockKey(), opts)
+		_, err := el.kvs.Get(el.lockKey(), nil)
 		if err != nil {
 			if eerr, ok := err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeNodeExist {
 				break
@@ -45,15 +44,12 @@ func (el *etcdLocker) Lock() error {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	setOpts := &etcdclient.SetOptions{}
-	_, err := el.kapi.Set(el.context, el.lockKey(), el.who, setOpts)
+	_, err := el.kvs.Set(el.lockKey(), el.who, nil)
 	return err
 }
 
 func (el *etcdLocker) Unlock() error {
-	opts := &etcdclient.DeleteOptions{}
-	_, err := el.kapi.Delete(el.context, el.lockKey(), opts)
-	return err
+	return el.kvs.Delete(el.lockKey())
 }
 
 func (el *etcdLocker) lockKey() string {

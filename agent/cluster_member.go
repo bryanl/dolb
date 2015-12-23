@@ -2,21 +2,17 @@ package agent
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
-	etcdclient "github.com/coreos/etcd/client"
 )
 
 var (
 	// checkTTL is the time to live for cluster member keys
 	checkTTL = 10 * time.Second
-
-	// rootKey is the root key for cluster memberships. Members will create their keys
-	// below this one.
-	rootKey = "/agent/leader/"
 
 	// ErrClusterNotJoined is returned when this agent has not joined a cluster.
 	ErrClusterNotJoined = errors.New("agent has not joined the cluster")
@@ -24,6 +20,16 @@ var (
 	// ErrClusterJoined is returned when this agent has already joined a cluster.
 	ErrClusterJoined = errors.New("agent has already joined the cluster")
 )
+
+// RegisterError is a cluster registration error.
+type RegisterError struct {
+	name string
+	err  error
+}
+
+func (re *RegisterError) Error() string {
+	return fmt.Sprintf("unable to register agent %q: %v", re.name, re.err)
+}
 
 // ClusterStatus is the status of the cluster.
 type ClusterStatus struct {
@@ -35,11 +41,10 @@ type ClusterStatus struct {
 
 // ClusterMember is an agent cluster membership.
 type ClusterMember struct {
-	checkTTL time.Duration
-	context  context.Context
-	kapi     etcdclient.KeysAPI
-	name     string
-	root     string
+	cmKVS   *CmKVS
+	context context.Context
+	name    string
+	root    string
 
 	Leader    string
 	NodeCount int
@@ -57,9 +62,8 @@ type ClusterMember struct {
 // NewClusterMember builds a ClusterMember.
 func NewClusterMember(name string, config *Config) *ClusterMember {
 	return &ClusterMember{
-		checkTTL: checkTTL,
-		context:  config.Context,
-		kapi:     config.KeysAPI,
+		cmKVS:   NewCmKVS(config.KVS, checkTTL),
+		context: config.Context,
 		logger: logrus.WithFields(logrus.Fields{
 			"member-name": name,
 		}),
@@ -68,7 +72,6 @@ func NewClusterMember(name string, config *Config) *ClusterMember {
 
 		schedule: schedule,
 		poll:     poll,
-		root:     rootKey,
 	}
 }
 
@@ -112,20 +115,15 @@ func (cm *ClusterMember) Start() error {
 
 	cm.started = true
 
-	opts := &etcdclient.SetOptions{
-		TTL: cm.checkTTL,
-	}
-
-	repo, err := cm.kapi.Set(cm.context, cm.key(), cm.name, opts)
+	mi, err := cm.cmKVS.RegisterAgent(cm.name)
 	if err != nil {
-		logrus.WithError(err).Error("cannot set initial value")
-		return err
+		return &RegisterError{err: err, name: cm.name}
 	}
 
-	cm.modifiedIndex = repo.Node.ModifiedIndex
+	cm.modifiedIndex = mi
 
 	go cm.schedule(cm, "poll", poll, time.Second)
-	go cm.schedule(cm, "refresh", refresh, cm.checkTTL/2)
+	go cm.schedule(cm, "refresh", refresh, cm.cmKVS.CheckTTL/2)
 
 	return nil
 }
@@ -171,54 +169,40 @@ func schedule(cm *ClusterMember, name string, fn scheduleFn, timeout time.Durati
 }
 
 func poll(cm *ClusterMember) error {
-	opts := &etcdclient.GetOptions{
-		Recursive: true,
-	}
-
-	resp, err := cm.kapi.Get(cm.context, cm.root, opts)
+	leader, err := cm.cmKVS.Leader()
 	if err != nil {
 		return err
 	}
 
-	min := resp.Node.Nodes[0].ModifiedIndex
-	var leaderNode etcdclient.Node
-	for _, n := range resp.Node.Nodes {
-		if n.CreatedIndex < min {
-			min = n.CreatedIndex
-			leaderNode = *n
-		}
+	logMsg := cm.logger
+	shouldLog := false
+
+	if l := leader.Name; cm.Leader != l {
+		logMsg = logMsg.WithField("leader", l)
+		cm.Leader = l
+		shouldLog = true
 	}
 
-	if leader := leaderNode.Value; leader != "" && leader != cm.Leader {
-		cm.logger.WithFields(logrus.Fields{
-			"leader": leaderNode.Value,
-		}).Info("updated leader")
-
-		cm.Leader = leaderNode.Value
+	if nc := leader.NodeCount; cm.NodeCount != nc {
+		logMsg = logMsg.WithField("node-count", nc)
+		cm.NodeCount = nc
+		shouldLog = true
 	}
 
-	if l := len(resp.Node.Nodes); l != cm.NodeCount {
-		cm.NodeCount = l
-		cm.logger.WithFields(logrus.Fields{
-			"node-count": l,
-		}).Info("updated node count")
+	if shouldLog {
+		logMsg.Info("cluster updated")
 	}
 
 	return nil
 }
 
 func refresh(cm *ClusterMember) error {
-	opts := &etcdclient.SetOptions{
-		TTL:       cm.checkTTL,
-		PrevIndex: cm.modifiedIndex,
-	}
-
-	resp, err := cm.kapi.Set(cm.context, cm.key(), cm.name, opts)
+	mi, err := cm.cmKVS.Refresh(cm.name, cm.modifiedIndex)
 	if err != nil {
 		return err
 	}
 
-	cm.modifiedIndex = resp.Node.ModifiedIndex
+	cm.modifiedIndex = mi
 
 	return nil
 }

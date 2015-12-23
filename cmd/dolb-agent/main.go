@@ -67,7 +67,7 @@ func main() {
 		log.WithError(err).Fatal("could not create keys api client")
 	}
 
-	config.KeysAPI = kapi
+	config.KVS = agent.NewEtcdKVS(config.Context, kapi)
 
 	cm := agent.NewClusterMember(*agentName, config)
 	err = cm.Start()

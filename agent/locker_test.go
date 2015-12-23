@@ -5,30 +5,32 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/bryanl/dolb/mocks"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-type keysAPIfn func(el *etcdLocker, ka *mocks.KeysAPI)
+type keysAPIfn func(el *etcdLocker, kvs *mockKVS)
 
 func withKeysAPI(fn keysAPIfn) {
-	ka := &mocks.KeysAPI{}
-	el := newEtcdLocker(context.Background(), "/foo", "user-a", ka)
+	m := &mockKVS{}
+	el := newEtcdLocker(context.Background(), "/foo", "user-a", m)
 
-	fn(el, ka)
+	fn(el, m)
 }
 
 func Test_etcdLocker(t *testing.T) {
-	withKeysAPI(func(el *etcdLocker, ka *mocks.KeysAPI) {
+	withKeysAPI(func(el *etcdLocker, kvs *mockKVS) {
 		getErr := etcdclient.Error{
 			Code: etcdclient.ErrorCodeNodeExist,
 		}
-		ka.On("Get", el.context, "/foo.lock", mock.Anything).Return(nil, nil).Once()
-		ka.On("Get", el.context, "/foo.lock", mock.Anything).Return(nil, getErr)
-		ka.On("Set", el.context, "/foo.lock", el.who, mock.Anything).Return(nil, nil)
-		ka.On("Delete", el.context, "/foo.lock", mock.Anything).Return(nil, nil)
+
+		node := &Node{}
+
+		kvs.On("Get", "/foo.lock", mock.Anything).Return(node, nil).Once()
+		kvs.On("Get", "/foo.lock", mock.Anything).Return(nil, getErr).Once()
+		kvs.On("Set", "/foo.lock", el.who, mock.Anything).Return(&Node{}, nil)
+		kvs.On("Delete", "/foo.lock").Return(nil)
 
 		err := el.Lock()
 		assert.NoError(t, err)

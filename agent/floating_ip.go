@@ -24,23 +24,23 @@ type FloatingIPManager interface {
 	Reserve() (string, error)
 }
 
-// floatingIPManager manages DigitalOcean floating ips for the agent.
-type floatingIPManager struct {
+// EtcdFloatingIPManager manages DigitalOcean floating ips for the agent.
+type EtcdFloatingIPManager struct {
 	context    context.Context
 	dropletID  string
 	godoClient *godo.Client
-	kapi       etcdclient.KeysAPI
+	fipKVS     *FipKVS
 	locker     Locker
 	name       string
 
-	assignNewIP func(*floatingIPManager) (string, error)
-	existingIP  func(*floatingIPManager) (string, error)
+	assignNewIP func(*EtcdFloatingIPManager) (string, error)
+	existingIP  func(*EtcdFloatingIPManager) (string, error)
 }
 
-var _ FloatingIPManager = &floatingIPManager{}
+var _ FloatingIPManager = &EtcdFloatingIPManager{}
 
 // NewFloatingIPManager creates a FloatingIPManager.
-func NewFloatingIPManager(config *Config) (*floatingIPManager, error) {
+func NewFloatingIPManager(config *Config) (*EtcdFloatingIPManager, error) {
 	if config.DigitalOceanToken == "" {
 		return nil, errors.New("requires DigitalOceanToken")
 	}
@@ -49,14 +49,14 @@ func NewFloatingIPManager(config *Config) (*floatingIPManager, error) {
 		context: config.Context,
 		key:     "/agent/floating_ip",
 		who:     config.Name,
-		kapi:    config.KeysAPI,
+		kvs:     config.KVS,
 	}
 
-	return &floatingIPManager{
+	return &EtcdFloatingIPManager{
 		context:    config.Context,
 		dropletID:  config.DropletID,
 		godoClient: do.GodoClientFactory(config.DigitalOceanToken),
-		kapi:       config.KeysAPI,
+		fipKVS:     NewFipKVS(config.KVS),
 		locker:     locker,
 
 		assignNewIP: assignNewIP,
@@ -65,7 +65,7 @@ func NewFloatingIPManager(config *Config) (*floatingIPManager, error) {
 }
 
 // Reserve reserves a floating ip.
-func (fim *floatingIPManager) Reserve() (string, error) {
+func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
 	ip, err := fim.existingIP(fim)
 	if err != nil {
 		if eerr, ok := err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeKeyNotFound {
@@ -133,16 +133,16 @@ func (fim *floatingIPManager) Reserve() (string, error) {
 	return ip, nil
 }
 
-func existingIP(fim *floatingIPManager) (string, error) {
-	resp, err := fim.kapi.Get(fim.context, fipKey, nil)
+func existingIP(fim *EtcdFloatingIPManager) (string, error) {
+	node, err := fim.fipKVS.Get(fipKey, nil)
 	if err != nil {
 		return "", err
 	}
 
-	return resp.Node.Value, nil
+	return node.Value, nil
 }
 
-func assignNewIP(fim *floatingIPManager) (string, error) {
+func assignNewIP(fim *EtcdFloatingIPManager) (string, error) {
 	id, err := fim.dropletIDInt()
 	if err != nil {
 		return "", err
@@ -156,7 +156,7 @@ func assignNewIP(fim *floatingIPManager) (string, error) {
 		return "", err
 	}
 
-	_, err = fim.kapi.Set(fim.context, fipKey, fip.IP, nil)
+	_, err = fim.fipKVS.Set(fipKey, fip.IP, nil)
 	if err != nil {
 		return "", err
 	}
@@ -164,6 +164,6 @@ func assignNewIP(fim *floatingIPManager) (string, error) {
 	return fip.IP, nil
 }
 
-func (fim *floatingIPManager) dropletIDInt() (int, error) {
+func (fim *EtcdFloatingIPManager) dropletIDInt() (int, error) {
 	return strconv.Atoi(fim.dropletID)
 }

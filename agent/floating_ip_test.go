@@ -25,18 +25,18 @@ func TestNewFloatingIPManager(t *testing.T) {
 	assert.Error(t, err)
 }
 
-type testFloatingIPManager func(*floatingIPManager, *fimMocks)
+type testFloatingIPManager func(*EtcdFloatingIPManager, *fimMocks)
 type fimMocks struct {
-	KeysAPI           *mocks.KeysAPI
 	FIPService        *mocks.FloatingIPsService
 	FIPActionsService *mocks.FloatingIPActionsService
+	KVS               *mockKVS
 }
 
 func withTestFloatingIPManager(fn testFloatingIPManager) {
 	fm := &fimMocks{
-		KeysAPI:           &mocks.KeysAPI{},
 		FIPService:        &mocks.FloatingIPsService{},
 		FIPActionsService: &mocks.FloatingIPActionsService{},
+		KVS:               &mockKVS{},
 	}
 
 	godoClient := &godo.Client{
@@ -44,16 +44,16 @@ func withTestFloatingIPManager(fn testFloatingIPManager) {
 		FloatingIPActions: fm.FIPActionsService,
 	}
 
-	fim := &floatingIPManager{
+	fim := &EtcdFloatingIPManager{
 		context:    context.Background(),
 		dropletID:  "12345",
 		godoClient: godoClient,
-		kapi:       fm.KeysAPI,
+		fipKVS:     NewFipKVS(fm.KVS),
 		locker:     &memLocker{},
-		assignNewIP: func(*floatingIPManager) (string, error) {
+		assignNewIP: func(*EtcdFloatingIPManager) (string, error) {
 			return "192.168.1.2", nil
 		},
-		existingIP: func(*floatingIPManager) (string, error) {
+		existingIP: func(*EtcdFloatingIPManager) (string, error) {
 			return "192.168.1.2", nil
 		},
 	}
@@ -62,8 +62,8 @@ func withTestFloatingIPManager(fn testFloatingIPManager) {
 }
 
 func TestFloatingIPManager_Reserve(t *testing.T) {
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
-		fim.existingIP = func(*floatingIPManager) (string, error) {
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
+		fim.existingIP = func(*EtcdFloatingIPManager) (string, error) {
 			return "192.168.1.2", nil
 		}
 
@@ -81,8 +81,8 @@ func TestFloatingIPManager_Reserve(t *testing.T) {
 }
 
 func TestFloatingIPManager_Reserve_no_ip(t *testing.T) {
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
-		fim.existingIP = func(*floatingIPManager) (string, error) {
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
+		fim.existingIP = func(*EtcdFloatingIPManager) (string, error) {
 			err := etcdclient.Error{
 				Code: etcdclient.ErrorCodeKeyNotFound,
 			}
@@ -103,8 +103,8 @@ func TestFloatingIPManager_Reserve_no_ip(t *testing.T) {
 }
 
 func TestFloatingIPManager_Reserve_unknown_error(t *testing.T) {
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
-		fim.existingIP = func(*floatingIPManager) (string, error) {
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
+		fim.existingIP = func(*EtcdFloatingIPManager) (string, error) {
 			return "", errors.New("whoops")
 		}
 
@@ -117,7 +117,7 @@ func TestFloatingIPManager_Reserve_not_leader(t *testing.T) {
 	defer func(td time.Duration) { actionPollTimeout = td }(actionPollTimeout)
 	actionPollTimeout = time.Millisecond
 
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
 		fip := &godo.FloatingIP{
 			Droplet: &godo.Droplet{
 				ID: 12346,
@@ -145,14 +145,10 @@ func TestFloatingIPManager_Reserve_not_leader(t *testing.T) {
 }
 
 func Test_existingIP(t *testing.T) {
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
-		resp := &etcdclient.Response{
-			Node: &etcdclient.Node{
-				Value: "192.168.1.2",
-			},
-		}
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
+		node := &Node{Value: "192.168.1.2"}
 
-		fm.KeysAPI.On("Get", fim.context, fipKey, mock.Anything).Return(resp, nil)
+		fm.KVS.On("Get", fipKey, mock.Anything).Return(node, nil)
 
 		ip, err := existingIP(fim)
 		assert.NoError(t, err)
@@ -161,12 +157,12 @@ func Test_existingIP(t *testing.T) {
 }
 
 func Test_existingIP_no_existing(t *testing.T) {
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
 		theErr := &etcdclient.Error{
 			Code: etcdclient.ErrorCodeKeyNotFound,
 		}
 
-		fm.KeysAPI.On("Get", fim.context, fipKey, mock.Anything).Return(nil, theErr)
+		fm.KVS.On("Get", fipKey, mock.Anything).Return(nil, theErr)
 
 		ip, err := existingIP(fim)
 		assert.Error(t, err)
@@ -175,13 +171,13 @@ func Test_existingIP_no_existing(t *testing.T) {
 }
 
 func Test_assignNewIP(t *testing.T) {
-	withTestFloatingIPManager(func(fim *floatingIPManager, fm *fimMocks) {
+	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
 		fip := &godo.FloatingIP{
 			IP: "192.168.1.2",
 		}
-		fm.FIPService.On("Create", mock.Anything).Return(fip, nil, nil)
 
-		fm.KeysAPI.On("Set", fim.context, fipKey, fip.IP, mock.Anything).Return(nil, nil)
+		fm.FIPService.On("Create", mock.Anything).Return(fip, nil, nil)
+		fm.KVS.On("Set", fipKey, fip.IP, mock.Anything).Return(&Node{}, nil)
 
 		ip, err := assignNewIP(fim)
 		assert.NoError(t, err)

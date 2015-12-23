@@ -87,16 +87,15 @@ func (a *Agent) PollClusterStatus() {
 			a.Config.Lock()
 			a.Config.ClusterStatus = cs
 
-			resp, err := a.Config.KeysAPI.Get(a.Config.Context, fipKey, nil)
+			node, err := a.Config.KVS.Get(fipKey, nil)
 			if err == nil {
-				a.Config.ClusterStatus.FloatingIP = resp.Node.Value
+				a.Config.ClusterStatus.FloatingIP = node.Value
 			}
 
 			a.Config.Unlock()
 
 			if cs.IsLeader {
-				ek := newEtcdKVS(a.Config.Context, a.Config.KeysAPI)
-				hkvs := newHaproxyKVS(ek)
+				hkvs := NewHaproxyKVS(a.Config.KVS)
 
 				err := hkvs.Init()
 				if err != nil {

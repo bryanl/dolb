@@ -6,34 +6,30 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/mocks"
-	etcdclient "github.com/coreos/etcd/client"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 )
 
-type mockEtcdClusterMember func(*ClusterMember, *etcdMocks)
-type etcdMocks struct {
-	KeysAPI *mocks.KeysAPI
+type mockEtcdClusterMember func(*ClusterMember, *myMocks)
+type myMocks struct {
+	KVS *mockKVS
 }
 
 func withTestClusterMember(fn mockEtcdClusterMember) {
-	em := &etcdMocks{
-		KeysAPI: &mocks.KeysAPI{},
+	em := &myMocks{
+		KVS: &mockKVS{},
 	}
 
 	cm := &ClusterMember{
-		checkTTL: 5 * time.Second,
-		context:  context.Background(),
-		kapi:     em.KeysAPI,
-		logger:   logrus.WithField("testing", true),
-		name:     "test",
+		cmKVS:   NewCmKVS(em.KVS, 5*time.Second),
+		context: context.Background(),
+		logger:  logrus.WithField("testing", true),
+		name:    "test",
 		schedule: func(cm *ClusterMember, name string, fn scheduleFn, d time.Duration) {
 			fn(cm)
 		},
 		poll:    poll,
 		refresh: refresh,
-		root:    rootKey,
 	}
 
 	fn(cm, em)
@@ -42,10 +38,10 @@ func withTestClusterMember(fn mockEtcdClusterMember) {
 func TestNewClusterMember(t *testing.T) {
 	name := "test"
 
-	ka := &mocks.KeysAPI{}
+	kvs := &mockKVS{}
 
 	c := &Config{
-		KeysAPI: ka,
+		KVS:     kvs,
 		Context: context.Background(),
 	}
 	cm := NewClusterMember(name, c)
@@ -53,7 +49,7 @@ func TestNewClusterMember(t *testing.T) {
 }
 
 func TestClusterMember_Change(t *testing.T) {
-	withTestClusterMember(func(cm *ClusterMember, em *etcdMocks) {
+	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		newCtx, fn := context.WithCancel(cm.context)
 		cm.context = newCtx
 
@@ -69,29 +65,21 @@ func TestClusterMember_Change(t *testing.T) {
 }
 
 func TestClusterMember_Stop(t *testing.T) {
-	withTestClusterMember(func(cm *ClusterMember, em *etcdMocks) {
+	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		err := cm.Stop()
 		assert.Equal(t, ErrClusterNotJoined, err)
 	})
 }
 
 func TestClusterMember_Start(t *testing.T) {
-	withTestClusterMember(func(cm *ClusterMember, em *etcdMocks) {
+	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		cm.schedule = func(*ClusterMember, string, scheduleFn, time.Duration) {
 			// no op
 		}
 
-		setOpts := &etcdclient.SetOptions{
-			TTL: cm.checkTTL,
-		}
-
-		resp := &etcdclient.Response{
-			Node: &etcdclient.Node{
-				ModifiedIndex: 99,
-			},
-		}
-
-		em.KeysAPI.On("Set", cm.context, cm.key(), cm.name, setOpts).Return(resp, nil)
+		opts := &SetOptions{TTL: time.Second * 5}
+		node := &Node{ModifiedIndex: 99}
+		em.KVS.On("Set", "/agent/leader/test", "test", opts).Return(node, nil)
 
 		err := cm.Start()
 		assert.NoError(t, err)
@@ -107,22 +95,17 @@ func TestClusterMember_Start(t *testing.T) {
 }
 
 func Test_poll(t *testing.T) {
-	withTestClusterMember(func(cm *ClusterMember, em *etcdMocks) {
+	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		cm.started = true
 
-		getOpts := &etcdclient.GetOptions{Recursive: true}
-		resp := &etcdclient.Response{
-			Node: &etcdclient.Node{
-				Nodes: etcdclient.Nodes{
-					&etcdclient.Node{
-						ModifiedIndex: 5,
-						CreatedIndex:  1,
-						Value:         cm.name,
-					},
-				},
+		opts := &GetOptions{Recursive: true}
+		node := &Node{
+			Nodes: Nodes{
+				&Node{ModifiedIndex: 5, CreatedIndex: 1, Value: cm.name},
 			},
 		}
-		em.KeysAPI.On("Get", cm.context, cm.root, getOpts).Return(resp, nil)
+
+		em.KVS.On("Get", "/agent/leader", opts).Return(node, nil)
 
 		poll(cm)
 
@@ -132,20 +115,12 @@ func Test_poll(t *testing.T) {
 }
 
 func Test_refresh(t *testing.T) {
-	withTestClusterMember(func(cm *ClusterMember, em *etcdMocks) {
+	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		cm.started = true
 
-		setOpts := &etcdclient.SetOptions{
-			TTL: cm.checkTTL,
-		}
-
-		resp := &etcdclient.Response{
-			Node: &etcdclient.Node{
-				ModifiedIndex: 99,
-			},
-		}
-
-		em.KeysAPI.On("Set", cm.context, cm.key(), cm.name, setOpts).Return(resp, nil)
+		opts := &SetOptions{TTL: 5 * time.Second}
+		node := &Node{ModifiedIndex: 99}
+		em.KVS.On("Set", "/agent/leader/test", "test", opts).Return(node, nil)
 
 		refresh(cm)
 
@@ -154,7 +129,7 @@ func Test_refresh(t *testing.T) {
 }
 
 func Test_schedule(t *testing.T) {
-	withTestClusterMember(func(cm *ClusterMember, em *etcdMocks) {
+	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		cm.started = true
 
 		ran := false
