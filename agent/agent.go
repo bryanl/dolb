@@ -45,9 +45,16 @@ func register(config *Config) error {
 	u.Path = "/register"
 
 	rr := server.RegisterRequest{
-		Host:        config.Name,
 		ClusterName: config.ClusterName,
+		FloatingIP:  config.ClusterStatus.FloatingIP,
+		Host:        config.Name,
+		IsLeader:    config.ClusterStatus.IsLeader,
 	}
+
+	if config.ClusterStatus.IsLeader {
+		rr.FloatingIP = config.ClusterStatus.FloatingIP
+	}
+
 	b, err := json.Marshal(&rr)
 	buf := bytes.NewReader(b)
 

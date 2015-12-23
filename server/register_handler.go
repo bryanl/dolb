@@ -12,7 +12,9 @@ import (
 
 type RegisterRequest struct {
 	ClusterName string
+	FloatingIP  string
 	Host        string
+	IsLeader    bool
 }
 
 type RegisterResponse struct {
@@ -36,8 +38,10 @@ func RegisterHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	config.logger.WithFields(logrus.Fields{
-		"host":         rr.Host,
 		"cluster-name": rr.ClusterName,
+		"floating-ip":  rr.FloatingIP,
+		"host":         rr.Host,
+		"is-leader":    rr.IsLeader,
 	}).Info("register request")
 
 	rResp := NewRegisterResponse()
