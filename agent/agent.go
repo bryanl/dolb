@@ -28,11 +28,6 @@ func New(cm *ClusterMember, config *Config) (*Agent, error) {
 		return nil, err
 	}
 
-	err = register(config)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Agent{
 		ClusterMember:     cm,
 		Config:            config,
@@ -80,7 +75,7 @@ func (a *Agent) PollClusterStatus() {
 	for {
 		select {
 		case cs := <-a.ClusterMember.Change():
-			log.WithFields(log.Fields{
+			a.Config.logger.WithFields(log.Fields{
 				"leader":     cs.Leader,
 				"node-count": cs.NodeCount,
 			}).Info("cluster changed")
@@ -94,15 +89,23 @@ func (a *Agent) PollClusterStatus() {
 
 			a.Config.Unlock()
 
+			a.Config.logger.WithFields(log.Fields{
+				"is-leader": cs.IsLeader,
+			}).Info("leader check")
+
 			if cs.IsLeader {
 				hkvs := NewHaproxyKVS(a.Config.KVS)
 
 				err := hkvs.Init()
 				if err != nil {
-					log.WithError(err).Error("could not create haproxy keys")
+					a.Config.logger.WithError(err).Error("could not create haproxy keys")
 				}
 
 				handleLeaderElection(a)
+			}
+
+			if err := register(a.Config); err != nil {
+				a.Config.logger.WithError(err).Error("could not register agent")
 			}
 		}
 	}
@@ -111,10 +114,10 @@ func (a *Agent) PollClusterStatus() {
 func handleLeaderElection(a *Agent) {
 	ip, err := a.FloatingIPManager.Reserve()
 	if err != nil {
-		log.WithError(err).Error("could not retrieve floating ip for agent")
+		a.Config.logger.WithError(err).Error("could not retrieve floating ip for agent")
 	}
 
 	a.Config.ClusterStatus.FloatingIP = ip
 
-	log.WithField("cluster-ip", ip).Info("retrieved cluster ip")
+	a.Config.logger.WithField("cluster-ip", ip).Info("retrieved cluster ip")
 }

@@ -32,6 +32,7 @@ type EtcdFloatingIPManager struct {
 	fipKVS     *FipKVS
 	locker     Locker
 	name       string
+	logger     *logrus.Entry
 
 	assignNewIP func(*EtcdFloatingIPManager) (string, error)
 	existingIP  func(*EtcdFloatingIPManager) (string, error)
@@ -58,6 +59,7 @@ func NewFloatingIPManager(config *Config) (*EtcdFloatingIPManager, error) {
 		godoClient: do.GodoClientFactory(config.DigitalOceanToken),
 		fipKVS:     NewFipKVS(config.KVS),
 		locker:     locker,
+		logger:     config.logger,
 
 		assignNewIP: assignNewIP,
 		existingIP:  existingIP,
@@ -66,24 +68,36 @@ func NewFloatingIPManager(config *Config) (*EtcdFloatingIPManager, error) {
 
 // Reserve reserves a floating ip.
 func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
+	fim.logger.Info("reserving floating ip")
+
 	ip, err := fim.existingIP(fim)
 	if err != nil {
-		if eerr, ok := err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeKeyNotFound {
-			ip, err = fim.assignNewIP(fim)
-			if err != nil {
-				logrus.WithError(err).Error("could not assign ip")
+		if kverr, ok := err.(*KVError); ok {
+			if eerr, ok := kverr.err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeKeyNotFound {
+				ip, err = fim.assignNewIP(fim)
+				if err != nil {
+					logrus.WithError(err).Error("could not assign ip")
+					return "", err
+				}
+			} else {
+				// who knows how we got to this state?
+				logrus.WithError(err).Error("unknown error when checking for existing ip")
+				fim.logger.WithField("raw-error", fmt.Sprintf("%#v", err)).Info("extra debug info")
 				return "", err
 			}
 		} else {
 			// who knows how we got to this state?
-			logrus.WithError(err).WithField("raw-error", fmt.Sprintf("%#v", err)).Error("unknown error when checking for existing ip")
+			logrus.WithError(err).Error("unknown error when checking for existing ip")
+			fim.logger.WithField("raw-error", fmt.Sprintf("%#v", err)).Info("extra debug info")
 			return "", err
 		}
 	}
 
+	fim.logger.WithField("current-fip", ip).Info("existing ip")
+
 	fip, _, err := fim.godoClient.FloatingIPs.Get(ip)
 	if err != nil {
-		logrus.WithField("fip", ip).WithError(err).Error("could not retrieve floating ip from DigitalOcean")
+		fim.logger.WithField("fip", ip).WithError(err).Error("could not retrieve floating ip from DigitalOcean")
 		return "", err
 	}
 
@@ -92,8 +106,13 @@ func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
 		return "", err
 	}
 
+	fim.logger.WithFields(logrus.Fields{
+		"current-fip-droplet-id": fip.Droplet.ID,
+		"my-droplet-id":          id,
+	}).Info("floating ip check")
+
 	if fip.Droplet.ID != id {
-		logrus.WithFields(logrus.Fields{
+		fim.logger.WithFields(logrus.Fields{
 			"current-id": fip.Droplet.ID,
 			"wanted-id":  id,
 		}).Info("moving floating ip")
@@ -108,7 +127,6 @@ func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
 
 		actionID := action.ID
 
-	ACTION_CHECK:
 		for {
 			action, _, err := fim.godoClient.FloatingIPActions.Get(ip, actionID)
 			if err != nil {
@@ -117,7 +135,7 @@ func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
 
 			switch action.Status {
 			case "completed":
-				break ACTION_CHECK
+				return ip, nil
 			case "errored":
 				return "", errors.New("assign IP action failed")
 			case "in-progress":
@@ -128,12 +146,15 @@ func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
 
 			time.Sleep(time.Second)
 		}
+	} else {
+		fim.logger.Info("leader has fip")
 	}
 
 	return ip, nil
 }
 
 func existingIP(fim *EtcdFloatingIPManager) (string, error) {
+	fim.logger.Info("checking for existing floating ip")
 	node, err := fim.fipKVS.Get(fipKey, nil)
 	if err != nil {
 		return "", err
@@ -143,6 +164,7 @@ func existingIP(fim *EtcdFloatingIPManager) (string, error) {
 }
 
 func assignNewIP(fim *EtcdFloatingIPManager) (string, error) {
+	fim.logger.Info("assigning floating ip")
 	id, err := fim.dropletIDInt()
 	if err != nil {
 		return "", err

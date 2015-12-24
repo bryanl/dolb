@@ -22,7 +22,7 @@ func TestNew(t *testing.T) {
 func Test_handleLeaderElection(t *testing.T) {
 	fim := &FloatingIPManagerMock{}
 	a := &Agent{
-		Config:            &Config{},
+		Config:            &Config{logger: logrus.WithField("test", "test")},
 		FloatingIPManager: fim,
 	}
 

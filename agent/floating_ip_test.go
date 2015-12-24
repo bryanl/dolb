@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/mocks"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/digitalocean/godo"
@@ -50,6 +51,7 @@ func withTestFloatingIPManager(fn testFloatingIPManager) {
 		godoClient: godoClient,
 		fipKVS:     NewFipKVS(fm.KVS),
 		locker:     &memLocker{},
+		logger:     logrus.WithField("test", "test"),
 		assignNewIP: func(*EtcdFloatingIPManager) (string, error) {
 			return "192.168.1.2", nil
 		},
@@ -83,8 +85,10 @@ func TestFloatingIPManager_Reserve(t *testing.T) {
 func TestFloatingIPManager_Reserve_no_ip(t *testing.T) {
 	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
 		fim.existingIP = func(*EtcdFloatingIPManager) (string, error) {
-			err := etcdclient.Error{
-				Code: etcdclient.ErrorCodeKeyNotFound,
+			err := &KVError{
+				err: etcdclient.Error{
+					Code: etcdclient.ErrorCodeKeyNotFound,
+				},
 			}
 			return "", err
 		}
