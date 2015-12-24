@@ -58,6 +58,10 @@ type godoMocks struct {
 	Droplets *mocks.DropletsService
 }
 
+type dropletOnboardMock struct{}
+
+func (dom *dropletOnboardMock) setup() {}
+
 func withMockGodo(fn withMockGodoClusterOpts) {
 	co := &clusterOps{}
 	co.DiscoveryGenerator = func() (string, error) {
@@ -69,6 +73,9 @@ func withMockGodo(fn withMockGodoClusterOpts) {
 	gc.Droplets = ds
 	co.GodoClientFactory = func(string) *godo.Client {
 		return gc
+	}
+	co.DropletOnboardFactory = func(godo.Droplet, *godo.Client, *Config) DropletOnboard {
+		return &dropletOnboardMock{}
 	}
 
 	gm := &godoMocks{
@@ -99,9 +106,11 @@ func TestBootstrap(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		su := "http://example.com"
+		config := &Config{
+			ServerURL: "http://example.com",
+		}
 
-		uri, err := co.Bootstrap(bc, su)
+		uri, err := co.Bootstrap(bc, config)
 		assert.NoError(t, err)
 		assert.Equal(t, "http://example.com/actions/1234", uri)
 	})
@@ -115,8 +124,11 @@ func TestBootstrap_MissingName(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		su := "http://example.com"
-		_, err := co.Bootstrap(bc, su)
+		config := &Config{
+			ServerURL: "http://example.com",
+		}
+
+		_, err := co.Bootstrap(bc, config)
 		assert.Error(t, err)
 	})
 }

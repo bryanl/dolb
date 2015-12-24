@@ -31,7 +31,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	co := config.ClusterOpsFactory()
-	u, err := co.Bootstrap(&bc, config.ServerURL)
+	u, err := co.Bootstrap(&bc, config)
 	if err != nil {
 		config.logger.WithError(err).Error("could not bootstrap cluster")
 		return service.Response{Body: err, Status: 400}

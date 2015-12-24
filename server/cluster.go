@@ -58,13 +58,14 @@ type RemoteSyslog struct {
 
 // ClusterOps is an interface for cluster operations.
 type ClusterOps interface {
-	Bootstrap(bc *BootstrapConfig, serverURL string) (string, error)
+	Bootstrap(bc *BootstrapConfig, config *Config) (string, error)
 }
 
 // clusterOps are operations for building clusters.
 type clusterOps struct {
-	DiscoveryGenerator func() (string, error)
-	GodoClientFactory  do.GodoClientFactoryFn
+	DiscoveryGenerator    func() (string, error)
+	GodoClientFactory     do.GodoClientFactoryFn
+	DropletOnboardFactory func(godo.Droplet, *godo.Client, *Config) DropletOnboard
 }
 
 var _ ClusterOps = &clusterOps{}
@@ -74,11 +75,16 @@ func NewClusterOps() ClusterOps {
 	return &clusterOps{
 		DiscoveryGenerator: discoveryGenerator,
 		GodoClientFactory:  do.GodoClientFactory,
+		DropletOnboardFactory: func(d godo.Droplet, godoc *godo.Client, c *Config) DropletOnboard {
+			return NewDropletOnboard(d, godoc, c)
+		},
 	}
 }
 
 // Bootstrap bootstraps the cluster and returns a tracking URI or error.
-func (co *clusterOps) Bootstrap(bc *BootstrapConfig, serverURL string) (string, error) {
+func (co *clusterOps) Bootstrap(bc *BootstrapConfig, config *Config) (string, error) {
+	serverURL := config.ServerURL
+
 	if !isValidClusterName(bc.Name) {
 		return "", errors.New("invalid cluster name")
 	}
@@ -118,9 +124,14 @@ func (co *clusterOps) Bootstrap(bc *BootstrapConfig, serverURL string) (string, 
 	}
 
 	godoc := co.GodoClientFactory(bc.DigitalOceanToken)
-	_, resp, err := godoc.Droplets.CreateMultiple(&dmcr)
+	droplets, resp, err := godoc.Droplets.CreateMultiple(&dmcr)
 	if err != nil {
 		return "", err
+	}
+
+	for _, d := range droplets {
+		dro := co.DropletOnboardFactory(d, godoc, config)
+		go dro.setup()
 	}
 
 	action := findAction("multiple_create", resp.Links.Actions)
