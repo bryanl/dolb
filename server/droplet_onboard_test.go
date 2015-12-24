@@ -47,6 +47,7 @@ func withLiveDropletOnboard(fn func(ldo *LiveDropletOnboard, lm *ldoMocks)) {
 
 	ldo := &LiveDropletOnboard{
 		Droplet:    d,
+		domain:     "lb.example.com",
 		godoClient: client,
 		logger:     logrus.WithField("test", "test"),
 
@@ -80,7 +81,7 @@ func Test_LiveDropletOnboard_assignDNS(t *testing.T) {
 
 			if c.err == nil {
 				drer := &godo.DomainRecordEditRequest{Type: "A", Name: "droplet-a.dev0", Data: c.ip}
-				lm.DomainsService.On("CreateRecord", "lb.doitapp.io", drer).Return(c.crReturn...)
+				lm.DomainsService.On("CreateRecord", ldo.domain, drer).Return(c.crReturn...)
 			}
 
 			err := assignDNS(ldo)

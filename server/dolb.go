@@ -10,6 +10,7 @@ import (
 
 // Config is configuration for the load balancer service.
 type Config struct {
+	BaseDomain        string
 	ClusterOpsFactory func() ClusterOps
 	ServerURL         string
 
@@ -17,8 +18,9 @@ type Config struct {
 }
 
 // NewConfig creates a Config.
-func NewConfig(su string) *Config {
+func NewConfig(bd, su string) *Config {
 	return &Config{
+		BaseDomain:        bd,
 		ClusterOpsFactory: NewClusterOps,
 		ServerURL:         su,
 	}

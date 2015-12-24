@@ -11,6 +11,10 @@ import (
 	"github.com/tylerb/graceful"
 )
 
+const (
+	baseDomain = "lb.doitapp.io"
+)
+
 var (
 	addr      = envflag.String("ADDR", ":8888", "listen address")
 	serverURL = envflag.String("SERVER_URL", "", "URL for this service")
@@ -23,7 +27,7 @@ func main() {
 		log.Fatal("SERVER_URL environment variable is required")
 	}
 
-	c := server.NewConfig(*serverURL)
+	c := server.NewConfig(baseDomain, *serverURL)
 	api, err := server.New(c)
 	if err != nil {
 		log.WithError(err).Fatal("could not create Api")

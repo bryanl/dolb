@@ -9,10 +9,6 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-var (
-	lbDomain = "lb.doitapp.io"
-)
-
 type DropletOnboard interface {
 	setup()
 }
@@ -21,6 +17,7 @@ type DropletOnboard interface {
 type LiveDropletOnboard struct {
 	Droplet godo.Droplet
 
+	domain     string
 	godoClient *godo.Client
 	logger     *logrus.Entry
 
@@ -33,6 +30,7 @@ type LiveDropletOnboard struct {
 func NewDropletOnboard(d godo.Droplet, client *godo.Client, config *Config) *LiveDropletOnboard {
 	return &LiveDropletOnboard{
 		Droplet:    d,
+		domain:     config.BaseDomain,
 		godoClient: client,
 		logger:     config.logger,
 
@@ -71,7 +69,7 @@ func assignDNS(dro *LiveDropletOnboard) error {
 		Data: ip,
 	}
 
-	_, _, err = dro.godoClient.Domains.CreateRecord(lbDomain, drer)
+	_, _, err = dro.godoClient.Domains.CreateRecord(dro.domain, drer)
 	return err
 }
 
