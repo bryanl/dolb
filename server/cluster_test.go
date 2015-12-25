@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -88,16 +89,7 @@ func withMockGodo(fn withMockGodoClusterOpts) {
 func TestBootstrap(t *testing.T) {
 	withMockGodo(func(co *clusterOps, gm *godoMocks) {
 		droplet := godo.Droplet{}
-		droplets := []godo.Droplet{droplet}
-		resp := &godo.Response{
-			Links: &godo.Links{
-				Actions: []godo.LinkAction{
-					godo.LinkAction{HREF: "http://example.com/actions/1234", Rel: "multiple_create"},
-				},
-			},
-		}
-
-		gm.Droplets.On("CreateMultiple", mock.Anything).Return(droplets, resp, nil)
+		gm.Droplets.On("Create", mock.Anything).Return(&droplet, nil, nil)
 
 		bc := &BootstrapConfig{
 			Name:              "test-cluster",
@@ -106,13 +98,19 @@ func TestBootstrap(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
+		lb := &doa.LoadBalancer{}
+
 		config := &Config{
 			ServerURL: "http://example.com",
 		}
 
-		uri, err := co.Bootstrap(bc, config)
+		bo := &BootstrapOptions{
+			LoadBalancer:    lb,
+			BootstrapConfig: bc,
+			Config:          config,
+		}
+		err := co.Bootstrap(bo)
 		assert.NoError(t, err)
-		assert.Equal(t, "http://example.com/actions/1234", uri)
 	})
 }
 
@@ -124,11 +122,18 @@ func TestBootstrap_MissingName(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
+		lb := &doa.LoadBalancer{}
+
 		config := &Config{
 			ServerURL: "http://example.com",
 		}
 
-		_, err := co.Bootstrap(bc, config)
+		bo := &BootstrapOptions{
+			LoadBalancer:    lb,
+			BootstrapConfig: bc,
+			Config:          config,
+		}
+		err := co.Bootstrap(bo)
 		assert.Error(t, err)
 	})
 }
@@ -166,6 +171,7 @@ func TestUserData(t *testing.T) {
 	userDataTemplate = string(b)
 
 	token := "12345"
+	agentID := "agent-2"
 
 	bc := &BootstrapConfig{
 		Region: "dev0",
@@ -176,9 +182,20 @@ func TestUserData(t *testing.T) {
 		},
 	}
 
+	config := &Config{
+		ServerURL: "http://example.com",
+	}
+
+	lb := &doa.LoadBalancer{ID: "lb-1"}
+	bo := &BootstrapOptions{
+		LoadBalancer:    lb,
+		Config:          config,
+		BootstrapConfig: bc,
+	}
+
 	co := &clusterOps{}
-	su := "http://example.com"
-	userData, err := co.userData(token, su, bc)
+
+	userData, err := co.userData(token, agentID, bo)
 	assert.NoError(t, err)
 
 	fmt.Println(userData)

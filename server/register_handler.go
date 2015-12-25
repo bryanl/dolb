@@ -7,14 +7,26 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/service"
 )
 
 type RegisterRequest struct {
-	ClusterName string
-	FloatingIP  string
-	Host        string
-	IsLeader    bool
+	AgentID     string `json:"agent_id"`
+	ClusterID   string `json:"cluster_id"`
+	ClusterName string `json:"cluster_name"`
+	FloatingIP  string `json:"floating_ip"`
+	Host        string `json:"host"`
+	IsLeader    bool   `json:"is_leader"`
+}
+
+func (rr *RegisterRequest) ToUpdateMemberRequest() *doa.UpdateMemberRequest {
+	return &doa.UpdateMemberRequest{
+		ID:         rr.ClusterID,
+		FloatingIP: rr.FloatingIP,
+		IsLeader:   rr.IsLeader,
+		Name:       rr.Host,
+	}
 }
 
 type RegisterResponse struct {
@@ -37,7 +49,16 @@ func RegisterHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
 	}
 
+	umr := rr.ToUpdateMemberRequest()
+	err = config.DBSession.UpdateLBMember(umr)
+	if err != nil {
+		config.logger.WithError(err).Error("could not update member")
+		return service.Response{Body: err, Status: 500}
+	}
+
 	config.logger.WithFields(logrus.Fields{
+		"agent-id":     rr.AgentID,
+		"cluster-id":   rr.ClusterID,
 		"cluster-name": rr.ClusterName,
 		"floating-ip":  rr.FloatingIP,
 		"host":         rr.Host,

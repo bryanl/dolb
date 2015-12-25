@@ -12,3 +12,4 @@ import:
 - package: github.com/vektra/mockery
 - package: github.com/coreos/etcd
 - package: github.com/satori/go.uuid
+- package: gopkg.in/dancannon/gorethink.v1

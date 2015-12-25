@@ -44,6 +44,8 @@ func register(config *Config) error {
 	u.Path = "/register"
 
 	rr := server.RegisterRequest{
+		AgentID:     config.AgentID,
+		ClusterID:   config.ClusterID,
 		ClusterName: config.ClusterName,
 		FloatingIP:  config.ClusterStatus.FloatingIP,
 		Host:        config.Name,

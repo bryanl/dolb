@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/service"
 )
 
 // BootstrapClusterResponse is a bootstrap cluster response.
 type BootstrapClusterResponse struct {
-	ID         string
-	MonitorURI string
+	LoadBalancer *doa.LoadBalancer
 }
 
 // LBCreateHandler is a http handler for creating a load balancer.
@@ -30,8 +30,20 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: "digitalocean_token is required", Status: 400}
 	}
 
+	lb, err := config.DBSession.CreateLoadBalancer(bc.Name, bc.Region, config.logger)
+	if err != nil {
+		config.logger.WithError(err).Error("could not save load balancer")
+		return service.Response{Body: err, Status: 400}
+	}
+
 	co := config.ClusterOpsFactory()
-	u, err := co.Bootstrap(&bc, config)
+	bo := &BootstrapOptions{
+		Config:          config,
+		LoadBalancer:    lb,
+		BootstrapConfig: &bc,
+	}
+
+	err = co.Bootstrap(bo)
 	if err != nil {
 		config.logger.WithError(err).Error("could not bootstrap cluster")
 		return service.Response{Body: err, Status: 400}
@@ -43,8 +55,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	}).Info("created load balancer")
 
 	bcResp := BootstrapClusterResponse{
-		ID:         bc.Name,
-		MonitorURI: u,
+		LoadBalancer: lb,
 	}
 
 	return service.Response{Body: bcResp, Status: http.StatusCreated}

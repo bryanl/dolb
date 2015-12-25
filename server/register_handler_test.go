@@ -7,12 +7,18 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestRegisterHandler(t *testing.T) {
+	mockSession := &doa.MockSession{}
+	mockSession.On("UpdateLBMember", mock.AnythingOfTypeArgument("*doa.UpdateMemberRequest")).Return(nil)
+
 	c := &Config{
-		logger: logrus.WithField("test", "test"),
+		logger:    logrus.WithField("test", "test"),
+		DBSession: mockSession,
 	}
 
 	rReq := RegisterRequest{

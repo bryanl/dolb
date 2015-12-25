@@ -1,5 +1,5 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-21T17:43:38.461693599-05:00
+updated: 2015-12-24T13:49:57.603520475-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -19,6 +19,9 @@ imports:
   version: 3e36af6d3af0e56fa3da71099f864933dea3d9fb
 - name: github.com/BurntSushi/toml
   version: 056c9bc7be7190eaa7715723883caffa5f8fa3e4
+- name: github.com/cenkalti/backoff
+  version: 4dc77674aceaabba2c7e3da25d4c823edfb73f99
+  repo: https://github.com/cenkalti/backoff
 - name: github.com/cheggaaa/pb
   version: da1f27ad1d9509b16f65f52fd9d8138b0f2dc7b2
 - name: github.com/codegangsta/cli
@@ -26,7 +29,7 @@ imports:
 - name: github.com/codegangsta/negroni
   version: c7477ad8e330bef55bf1ebe300cf8aa67c492d1b
 - name: github.com/coreos/etcd
-  version: d639e4f7f6ccf6140c06e8a88a8498b12a9f39ce
+  version: dac56faf61161461a75a4ca90be80f337ad33338
 - name: github.com/coreos/go-etcd
   version: 003851be7bb0694fe3cc457a49529a19388ee7cf
 - name: github.com/coreos/go-semver
@@ -47,6 +50,9 @@ imports:
   version: 71acacd42f85e5e82f70a55327789582a5200a90
   subpackages:
   - md2man
+- name: github.com/dancannon/gorethink
+  version: a124c9663325ed9f7fb669d17c69961b59151e6e
+  repo: https://github.com/dancannon/gorethink
 - name: github.com/digitalocean/godo
   version: 2688c11a02dc3deac65645c82c3c812f95e417bf
 - name: github.com/godbus/dbus
@@ -67,6 +73,9 @@ imports:
   version: 1c83b3eabd45b6d76072b66b746c20815fb2872d
 - name: github.com/gorilla/mux
   version: 9c068cf16d982f8bd444b8c352acbeec34c4fe5b
+- name: github.com/hailocab/go-hostpool
+  version: 50839ee41f32bfca8d03a183031aa634b2dc1c64
+  repo: https://github.com/hailocab/go-hostpool
 - name: github.com/hashicorp/hcl
   version: 197e8d3cf42199cfd53cd775deb37f3637234635
 - name: github.com/ianschenck/envflag
@@ -91,6 +100,8 @@ imports:
   - pbutil
 - name: github.com/mitchellh/mapstructure
   version: 281073eb9eb092240d33ef253c404f1cca550309
+- name: github.com/olekukonko/ts
+  version: ecf753e7c962639ab5a1fb46f7da627d4c0a04b8
 - name: github.com/prometheus/client_golang
   version: e51041b3fa41cece0dca035740ba6411905be473
   subpackages:
@@ -125,7 +136,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/spf13/viper
-  version: 79971f1ae71e74d2e814b9b4bb91fb59b0263654
+  version: 110492b3001269a0777997fcbe68a60828fac4cb
 - name: github.com/stretchr/graceful
   version: 48afeb21e2fcbcff0f30bd5ad6b97747b0fae38e
 - name: github.com/stretchr/objx
@@ -166,7 +177,7 @@ imports:
 - name: golang.org/x/text
   version: cf4986612c83df6c55578ba198316d1684a9a287
 - name: golang.org/x/tools
-  version: 9673333889cecd0170042cef4585f782e59c45da
+  version: d6e83e534da905609e21e4086a0fbaed33f88d07
 - name: google.golang.org/api
   version: dc6d2353af16e2a2b0ff6986af051d473a4ed468
 - name: google.golang.org/appengine
@@ -180,6 +191,11 @@ imports:
   version: f5ebd86be717593ab029545492c93ddf8914832b
 - name: gopkg.in/airbrake/gobrake.v2
   version: c9d51adc624b5cc4c1bf8de730a09af4878ffe2d
+- name: gopkg.in/dancannon/gorethink.v1
+  version: a124c9663325ed9f7fb669d17c69961b59151e6e
+- name: gopkg.in/fatih/pool.v2
+  version: cba550ebf9bce999a02e963296d4bc7a486cb715
+  repo: https://gopkg.in/fatih/pool.v2
 - name: gopkg.in/fsnotify.v1
   version: 508915b7500b6e42a87132e4afeb4729cebc7cbb
 - name: gopkg.in/gemnasium/logrus-airbrake-hook.v2

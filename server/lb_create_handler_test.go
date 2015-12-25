@@ -6,19 +6,26 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func Test_LBCreateHandler(t *testing.T) {
-	clusterOpsMock := &ClusterOpsMock{}
-	clusterOpsMock.On("Bootstrap", mock.Anything, mock.Anything).Return("http://example.com/action/12345", nil)
+	clusterOpsMock := &MockClusterOps{}
+	clusterOpsMock.On("Bootstrap", mock.AnythingOfTypeArgument("*server.BootstrapOptions")).Return(nil)
+
+	sess := &doa.MockSession{}
+	lb := &doa.LoadBalancer{ID: "12345", Name: "lb-1"}
+
+	sess.On("CreateLoadBalancer", "lb-1", "dev0", mock.AnythingOfTypeArgument("*logrus.Entry")).Return(lb, nil)
 
 	config := &Config{
 		ClusterOpsFactory: func() ClusterOps {
 			return clusterOpsMock
 		},
-		logger: logrus.WithField("test", "test"),
+		DBSession: sess,
+		logger:    logrus.WithField("test", "test"),
 	}
 
 	body := []byte(`{"name": "lb-1", "region": "dev0", "ssh_keys": ["12345"], "digitalocean_token": "do-token"}`)
@@ -30,12 +37,11 @@ func Test_LBCreateHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.Status)
 
 	bcr := resp.Body.(BootstrapClusterResponse)
-	assert.Equal(t, "lb-1", bcr.ID)
-	assert.Equal(t, "http://example.com/action/12345", bcr.MonitorURI)
+	assert.Equal(t, "12345", bcr.LoadBalancer.ID)
 }
 
 func Test_LBCreateHandler_no_token(t *testing.T) {
-	clusterOpsMock := &ClusterOpsMock{}
+	clusterOpsMock := &MockClusterOps{}
 	clusterOpsMock.On("Bootstrap", mock.Anything, mock.Anything).Return("http://example.com/action/12345", nil)
 
 	config := &Config{

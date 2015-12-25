@@ -15,8 +15,10 @@ type Config struct {
 	sync.Mutex
 	ClusterStatus ClusterStatus
 
+	AgentID           string
 	Context           context.Context
 	ClusterName       string
+	ClusterID         string
 	DigitalOceanToken string
 	DropletID         string
 	KVS               KVS

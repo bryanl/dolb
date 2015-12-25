@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -12,16 +13,18 @@ import (
 type Config struct {
 	BaseDomain        string
 	ClusterOpsFactory func() ClusterOps
+	DBSession         doa.Session
 	ServerURL         string
 
 	logger *logrus.Entry
 }
 
 // NewConfig creates a Config.
-func NewConfig(bd, su string) *Config {
+func NewConfig(bd, su string, sess doa.Session) *Config {
 	return &Config{
 		BaseDomain:        bd,
 		ClusterOpsFactory: NewClusterOps,
+		DBSession:         sess,
 		ServerURL:         su,
 	}
 }

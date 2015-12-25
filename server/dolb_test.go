@@ -4,11 +4,14 @@ package server
 import (
 	"testing"
 
+	"github.com/bryanl/dolb/doa"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_New(t *testing.T) {
-	c := NewConfig("lb.example.com", "http://example.com")
+	sess := &doa.MockSession{}
+
+	c := NewConfig("lb.example.com", "http://example.com", sess)
 	api, err := New(c)
 	assert.NoError(t, err)
 	assert.NotNil(t, api)

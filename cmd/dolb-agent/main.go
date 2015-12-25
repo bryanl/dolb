@@ -18,8 +18,10 @@ import (
 
 var (
 	addr          = envflag.String("ADDR", ":8889", "listen address")
+	agentID       = envflag.String("AGENT_ID", "", "agent id")
 	agentName     = envflag.String("AGENT_NAME", "", "agent name")
 	agentRegion   = envflag.String("AGENT_REGION", "", "agent DigitalOcean region")
+	clusterID     = envflag.String("CLUSTER_ID", "", "cluster id")
 	clusterName   = envflag.String("CLUSTER_NAME", "", "cluster name")
 	etcdEndpoints = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
 	dropletID     = envflag.String("DROPLET_ID", "", "current droplet id")
@@ -30,12 +32,20 @@ var (
 func main() {
 	envflag.Parse()
 
+	if *agentID == "" {
+		log.Fatal("invalid AGENT_ID environment variable")
+	}
+
 	if *agentName == "" {
 		*agentName = generateInstanceID()
 	}
 
 	if *agentRegion == "" {
 		log.Fatal("invalid AGENT_REGION environment variable")
+	}
+
+	if *clusterID == "" {
+		log.Fatal("invalid CLUSTER_ID environment variable")
 	}
 
 	if *clusterName == "" {
@@ -51,7 +61,9 @@ func main() {
 	}
 
 	config := &agent.Config{
+		AgentID:           *agentID,
 		DigitalOceanToken: *doToken,
+		ClusterID:         *clusterID,
 		ClusterName:       *clusterName,
 		Context:           context.Background(),
 		DropletID:         *dropletID,

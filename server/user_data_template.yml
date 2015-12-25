@@ -136,10 +136,12 @@ write_files:
   - path: /home/core/digitalocean.env
     permissions: 0644
     content: |
-      DIGITALOCEAN_ACCESS_TOKEN={{.BootstrapConfig.DigitalOceanToken}}
+      AGENT_ID={{.AgentID}}
       AGENT_REGION={{.BootstrapConfig.Region}}
-      SERVER_URL={{.ServerURL}}
+      DIGITALOCEAN_ACCESS_TOKEN={{.BootstrapConfig.DigitalOceanToken}}
+      CLUSTER_ID={{.ClusterID}}
       CLUSTER_NAME={{.BootstrapConfig.Name}}
+      SERVER_URL={{.ServerURL}}
   - path: /root/bin/fixup_firewall.sh
     permissions: 0755
     content: |
