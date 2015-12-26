@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/do"
-	"github.com/bryanl/dolb/doa"
 	"github.com/digitalocean/godo"
 )
 
@@ -61,7 +61,7 @@ type RemoteSyslog struct {
 
 type BootstrapOptions struct {
 	BootstrapConfig *BootstrapConfig
-	LoadBalancer    *doa.LoadBalancer
+	LoadBalancer    *dao.LoadBalancer
 	Config          *Config
 }
 
@@ -118,12 +118,12 @@ func (co *clusterOps) Bootstrap(bo *BootstrapOptions) error {
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("lb-%s-%d", bc.Name, i+1)
 
-		cmr := &doa.CreateMemberRequest{
+		cmr := &dao.CreateAgentRequest{
 			ClusterID: bo.LoadBalancer.ID,
 			Name:      name,
 		}
 
-		a, err := bo.Config.DBSession.CreateLBMember(cmr)
+		a, err := bo.Config.DBSession.CreateAgent(cmr)
 		if err != nil {
 			return err
 		}

@@ -4,12 +4,12 @@ package server
 import (
 	"testing"
 
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_New(t *testing.T) {
-	sess := &doa.MockSession{}
+	sess := &dao.MockSession{}
 
 	c := NewConfig("lb.example.com", "http://example.com", sess)
 	api, err := New(c)

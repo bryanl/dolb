@@ -9,6 +9,10 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+var (
+	PingPath = "/ping"
+)
+
 // HandlerFunc is a handler function that returns a Response.
 type HandlerFunc func(config interface{}, r *http.Request) Response
 

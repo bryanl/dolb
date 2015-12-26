@@ -1,4 +1,4 @@
-package doa
+package dao
 
 import (
 	"database/sql"
@@ -19,10 +19,10 @@ type LoadBalancer struct {
 	FloatingIP        string         `db:"floating_ip"`
 	FloatingIPID      int            `db:"floating_ip_id"`
 	DigitalOceanToken string         `db:"digitalocean_access_token"`
-	Members           []LoadBalancerMember
+	Members           []Agent
 }
 
-type LoadBalancerMember struct {
+type Agent struct {
 	ID         string    `db:"id"`
 	ClusterID  string    `db:"cluster_id"`
 	DropletID  int       `db:"droplet_id"`
@@ -31,12 +31,12 @@ type LoadBalancerMember struct {
 	LastSeenAt time.Time `db:"last_seen_at"`
 }
 
-type CreateMemberRequest struct {
+type CreateAgentRequest struct {
 	ClusterID string
 	Name      string
 }
 
-type UpdateMemberRequest struct {
+type UpdateAgentRequest struct {
 	ID         string
 	ClusterID  string
 	FloatingIP string
@@ -53,11 +53,11 @@ type AgentDOConfig struct {
 
 type Session interface {
 	CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error)
-	CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMember, error)
-	RetrieveAgent(id string) (*LoadBalancerMember, error)
+	CreateAgent(cmr *CreateAgentRequest) (*Agent, error)
+	RetrieveAgent(id string) (*Agent, error)
 	RetrieveLoadBalancer(id string) (*LoadBalancer, error)
-	UpdateLBMember(umr *UpdateMemberRequest) error
-	UpdateAgentDOConfig(doOptions *AgentDOConfig) (*LoadBalancerMember, error)
+	UpdateAgent(umr *UpdateAgentRequest) error
+	UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, error)
 	UpdateLoadBalancer(*LoadBalancer) error
 }
 
@@ -120,7 +120,7 @@ func (ps *PgSession) CreateLoadBalancer(name, region, dotoken string, logger *lo
 	}, nil
 }
 
-func (ps *PgSession) CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMember, error) {
+func (ps *PgSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
 	tx, err := ps.db.Begin()
 	if err != nil {
 		return nil, err
@@ -142,15 +142,15 @@ func (ps *PgSession) CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMemb
 		return nil, err
 	}
 
-	return &LoadBalancerMember{
+	return &Agent{
 		ID:        id,
 		Name:      cmr.Name,
 		ClusterID: cmr.ClusterID,
 	}, nil
 }
 
-func (ps *PgSession) RetrieveAgent(id string) (*LoadBalancerMember, error) {
-	a := &LoadBalancerMember{}
+func (ps *PgSession) RetrieveAgent(id string) (*Agent, error) {
+	a := &Agent{}
 	if err := ps.db.Get(a, "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE id = $1", id); err != nil {
 		logrus.WithError(err).Error("retrieve-agent")
 		return nil, err
@@ -167,7 +167,7 @@ func (ps *PgSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
 		return nil, err
 	}
 
-	lb.Members = []LoadBalancerMember{}
+	lb.Members = []Agent{}
 	q = "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE cluster_id = $1"
 	if err := ps.db.Select(&lb.Members, q, id); err != nil {
 		logrus.WithError(err).Error("retrieve-load-balancer agents")
@@ -177,7 +177,7 @@ func (ps *PgSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
 	return lb, nil
 }
 
-func (ps *PgSession) UpdateLBMember(umr *UpdateMemberRequest) error {
+func (ps *PgSession) UpdateAgent(umr *UpdateAgentRequest) error {
 	tx, err := ps.db.Begin()
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func (ps *PgSession) UpdateLBMember(umr *UpdateMemberRequest) error {
 	return nil
 }
 
-func (ps *PgSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*LoadBalancerMember, error) {
+func (ps *PgSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, error) {
 	tx, err := ps.db.Begin()
 	if err != nil {
 		return nil, err

@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/do"
-	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -14,7 +14,7 @@ import (
 type Config struct {
 	BaseDomain        string
 	ClusterOpsFactory func() ClusterOps
-	DBSession         doa.Session
+	DBSession         dao.Session
 	ServerURL         string
 	GodoClientFactory do.GodoClientFactoryFn
 
@@ -22,7 +22,7 @@ type Config struct {
 }
 
 // NewConfig creates a Config.
-func NewConfig(bd, su string, sess doa.Session) *Config {
+func NewConfig(bd, su string, sess dao.Session) *Config {
 	return &Config{
 		BaseDomain:        bd,
 		ClusterOpsFactory: NewClusterOps,
@@ -52,7 +52,7 @@ func New(config *Config) (*API, error) {
 	}
 
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
-	a.Mux.Handle("/register", service.Handler{Config: config, F: RegisterHandler}).Methods("POST")
+	a.Mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 
 	return a, nil
 }

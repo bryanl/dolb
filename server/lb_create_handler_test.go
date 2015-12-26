@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -15,8 +15,8 @@ func Test_LBCreateHandler(t *testing.T) {
 	clusterOpsMock := &MockClusterOps{}
 	clusterOpsMock.On("Bootstrap", mock.AnythingOfTypeArgument("*server.BootstrapOptions")).Return(nil)
 
-	sess := &doa.MockSession{}
-	lb := &doa.LoadBalancer{ID: "12345", Name: "lb-1"}
+	sess := &dao.MockSession{}
+	lb := &dao.LoadBalancer{ID: "12345", Name: "lb-1"}
 
 	sess.On("CreateLoadBalancer", "lb-1", "dev0", "do-token", mock.AnythingOfTypeArgument("*logrus.Entry")).Return(lb, nil)
 

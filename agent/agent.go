@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/server"
+	"github.com/bryanl/dolb/service"
 )
 
 var (
@@ -35,15 +36,15 @@ func New(cm *ClusterMember, config *Config) (*Agent, error) {
 	}, nil
 }
 
-func register(config *Config) error {
+func pingServer(config *Config) error {
 	u, err := url.Parse(config.ServerURL)
 	if err != nil {
 		return err
 	}
 
-	u.Path = "/register"
+	u.Path = service.PingPath
 
-	rr := server.RegisterRequest{
+	rr := server.PingRequest{
 		AgentID:     config.AgentID,
 		ClusterID:   config.ClusterID,
 		ClusterName: config.ClusterName,
@@ -106,7 +107,7 @@ func (a *Agent) PollClusterStatus() {
 				handleLeaderElection(a)
 			}
 
-			if err := register(a.Config); err != nil {
+			if err := pingServer(a.Config); err != nil {
 				a.Config.logger.WithError(err).Error("could not register agent")
 			}
 		}

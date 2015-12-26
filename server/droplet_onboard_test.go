@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,7 @@ type ldoMocks struct {
 	ActionsService  *mocks.ActionsService
 	DomainsService  *mocks.DomainsService
 	DropletsService *mocks.DropletsService
-	Session         *doa.MockSession
+	Session         *dao.MockSession
 }
 
 func withLiveDropletOnboard(fn func(ldo *LiveDropletOnboard, lm *ldoMocks)) {
@@ -35,7 +35,7 @@ func withLiveDropletOnboard(fn func(ldo *LiveDropletOnboard, lm *ldoMocks)) {
 		ActionsService:  &mocks.ActionsService{},
 		DomainsService:  &mocks.DomainsService{},
 		DropletsService: &mocks.DropletsService{},
-		Session:         &doa.MockSession{},
+		Session:         &dao.MockSession{},
 	}
 	d := godo.Droplet{
 		ID:     12345,
@@ -158,7 +158,7 @@ func Test_LiveDropletOnboard_setup(t *testing.T) {
 			{dr: &godo.DomainRecord{ID: 1}, err: nil},
 		}
 
-		lbm := &doa.LoadBalancerMember{}
+		lbm := &dao.Agent{}
 		lm.Session.On("UpdateAgentDOConfig", mock.Anything).Return(lbm, nil)
 
 		for _, c := range cases {

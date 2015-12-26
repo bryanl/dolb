@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 	"github.com/digitalocean/godo"
 )
 
-type RegisterRequest struct {
+type PingRequest struct {
 	AgentID     string `json:"agent_id"`
 	ClusterID   string `json:"cluster_id"`
 	ClusterName string `json:"cluster_name"`
@@ -21,13 +21,13 @@ type RegisterRequest struct {
 	IsLeader    bool   `json:"is_leader"`
 }
 
-func (rr *RegisterRequest) ToUpdateMemberRequest() *doa.UpdateMemberRequest {
-	return &doa.UpdateMemberRequest{
-		ID:         rr.AgentID,
-		ClusterID:  rr.ClusterID,
-		FloatingIP: rr.FloatingIP,
-		IsLeader:   rr.IsLeader,
-		Name:       rr.Host,
+func (pr *PingRequest) ToUpdateMemberRequest() *dao.UpdateAgentRequest {
+	return &dao.UpdateAgentRequest{
+		ID:         pr.AgentID,
+		ClusterID:  pr.ClusterID,
+		FloatingIP: pr.FloatingIP,
+		IsLeader:   pr.IsLeader,
+		Name:       pr.Host,
 	}
 }
 
@@ -41,11 +41,11 @@ func NewRegisterResponse() *RegisterResponse {
 	}
 }
 
-func RegisterHandler(c interface{}, r *http.Request) service.Response {
+func PingHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 	defer r.Body.Close()
 
-	var rr RegisterRequest
+	var rr PingRequest
 	err := json.NewDecoder(r.Body).Decode(&rr)
 	if err != nil {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
@@ -58,12 +58,9 @@ func RegisterHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	if rr.IsLeader && lb.FloatingIP == "" {
-		// set floating ip
-		logrus.WithField("rr", fmt.Sprintf("%#v", rr)).Info("creating floating ip")
-
 		drer := &godo.DomainRecordEditRequest{
 			Type: "A",
-			Name: fmt.Sprintf("c-%s.%s", lb.Name, config.BaseDomain),
+			Name: fmt.Sprintf("c-%s", lb.Name),
 			Data: rr.FloatingIP,
 		}
 
@@ -84,7 +81,7 @@ func RegisterHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	umr := rr.ToUpdateMemberRequest()
-	err = config.DBSession.UpdateLBMember(umr)
+	err = config.DBSession.UpdateAgent(umr)
 	if err != nil {
 		config.logger.WithError(err).Error("could not update member")
 		return service.Response{Body: err, Status: 500}
@@ -97,7 +94,7 @@ func RegisterHandler(c interface{}, r *http.Request) service.Response {
 		"floating-ip":  rr.FloatingIP,
 		"host":         rr.Host,
 		"is-leader":    rr.IsLeader,
-	}).Info("register request")
+	}).Info("ping request")
 
 	rResp := NewRegisterResponse()
 	return service.Response{Body: rResp, Status: http.StatusCreated}

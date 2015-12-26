@@ -6,7 +6,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/server"
 	"github.com/ianschenck/envflag"
 	"github.com/tylerb/graceful"
@@ -33,7 +33,7 @@ func main() {
 		log.Fatal("DB_URL environment variable is required")
 	}
 
-	sess, err := doa.NewSession(*dbURL)
+	sess, err := dao.NewSession(*dbURL)
 	if err != nil {
 		log.WithError(err).Fatal("could not create database connection")
 	}

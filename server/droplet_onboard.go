@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/digitalocean/godo"
 )
 
@@ -22,7 +22,7 @@ type LiveDropletOnboard struct {
 	domain     string
 	godoClient *godo.Client
 	logger     *logrus.Entry
-	session    doa.Session
+	session    dao.Session
 
 	assignDNS               func(ldo *LiveDropletOnboard) (*godo.DomainRecord, error)
 	publicIPV4Address       func(ldo *LiveDropletOnboard) (string, error)
@@ -57,7 +57,7 @@ func (dro *LiveDropletOnboard) setup() {
 		return
 	}
 
-	adc := &doa.AgentDOConfig{
+	adc := &dao.AgentDOConfig{
 		ID:        dro.agentID,
 		IPID:      r.ID,
 		DropletID: dro.Droplet.ID,

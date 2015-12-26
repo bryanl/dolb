@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 )
 
 // BootstrapClusterResponse is a bootstrap cluster response.
 type BootstrapClusterResponse struct {
-	LoadBalancer *doa.LoadBalancer
+	LoadBalancer *dao.LoadBalancer
 }
 
 // LBCreateHandler is a http handler for creating a load balancer.

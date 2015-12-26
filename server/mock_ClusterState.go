@@ -6,6 +6,6 @@ type MockClusterState struct {
 	mock.Mock
 }
 
-func (_m *MockClusterState) Update(rr *RegisterRequest) {
+func (_m *MockClusterState) Update(rr *PingRequest) {
 	_m.Called(rr)
 }

@@ -1,4 +1,4 @@
-package doa
+package dao
 
 import (
 	"errors"
@@ -88,11 +88,11 @@ func TestPgSession_CreateLoadBalancerMember(t *testing.T) {
 			WithArgs("1", "cluster-1", "agent-1").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		cmr := &CreateMemberRequest{
+		cmr := &CreateAgentRequest{
 			ClusterID: "cluster-1",
 			Name:      "agent-1",
 		}
-		agent, err := sess.CreateLBMember(cmr)
+		agent, err := sess.CreateAgent(cmr)
 		assert.NoError(t, err)
 
 		assert.Equal(t, cmr.ClusterID, agent.ClusterID)
@@ -107,12 +107,12 @@ func TestPgSession_UpdateLBMember(t *testing.T) {
 		mock.ExpectExec("UPDATE agents").WithArgs("agent-12345").WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		umr := &UpdateMemberRequest{
+		umr := &UpdateAgentRequest{
 			ID:        "agent-12345",
 			ClusterID: "cluster-12345",
 		}
 
-		err := sess.UpdateLBMember(umr)
+		err := sess.UpdateAgent(umr)
 		assert.NoError(t, err)
 	})
 }
@@ -126,14 +126,14 @@ func TestPgSession_UpdateLBMember_IsLeader(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		umr := &UpdateMemberRequest{
+		umr := &UpdateAgentRequest{
 			ID:         "agent-12345",
 			ClusterID:  "cluster-12345",
 			IsLeader:   true,
 			FloatingIP: "4.4.4.4",
 		}
 
-		err := sess.UpdateLBMember(umr)
+		err := sess.UpdateAgent(umr)
 		assert.NoError(t, err)
 	})
 }

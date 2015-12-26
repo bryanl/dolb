@@ -1,4 +1,4 @@
-package doa
+package dao
 
 import "github.com/stretchr/testify/mock"
 
@@ -31,20 +31,20 @@ func (_m *MockSession) CreateLoadBalancer(name string, region string, dotoken st
 
 	return r0, r1
 }
-func (_m *MockSession) CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMember, error) {
+func (_m *MockSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
 	ret := _m.Called(cmr)
 
-	var r0 *LoadBalancerMember
-	if rf, ok := ret.Get(0).(func(*CreateMemberRequest) *LoadBalancerMember); ok {
+	var r0 *Agent
+	if rf, ok := ret.Get(0).(func(*CreateAgentRequest) *Agent); ok {
 		r0 = rf(cmr)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*LoadBalancerMember)
+			r0 = ret.Get(0).(*Agent)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*CreateMemberRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(*CreateAgentRequest) error); ok {
 		r1 = rf(cmr)
 	} else {
 		r1 = ret.Error(1)
@@ -52,15 +52,15 @@ func (_m *MockSession) CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMe
 
 	return r0, r1
 }
-func (_m *MockSession) RetrieveAgent(id string) (*LoadBalancerMember, error) {
+func (_m *MockSession) RetrieveAgent(id string) (*Agent, error) {
 	ret := _m.Called(id)
 
-	var r0 *LoadBalancerMember
-	if rf, ok := ret.Get(0).(func(string) *LoadBalancerMember); ok {
+	var r0 *Agent
+	if rf, ok := ret.Get(0).(func(string) *Agent); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*LoadBalancerMember)
+			r0 = ret.Get(0).(*Agent)
 		}
 	}
 
@@ -94,11 +94,11 @@ func (_m *MockSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
 
 	return r0, r1
 }
-func (_m *MockSession) UpdateLBMember(umr *UpdateMemberRequest) error {
+func (_m *MockSession) UpdateAgent(umr *UpdateAgentRequest) error {
 	ret := _m.Called(umr)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*UpdateMemberRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(*UpdateAgentRequest) error); ok {
 		r0 = rf(umr)
 	} else {
 		r0 = ret.Error(0)
@@ -106,15 +106,15 @@ func (_m *MockSession) UpdateLBMember(umr *UpdateMemberRequest) error {
 
 	return r0
 }
-func (_m *MockSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*LoadBalancerMember, error) {
+func (_m *MockSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, error) {
 	ret := _m.Called(doOptions)
 
-	var r0 *LoadBalancerMember
-	if rf, ok := ret.Get(0).(func(*AgentDOConfig) *LoadBalancerMember); ok {
+	var r0 *Agent
+	if rf, ok := ret.Get(0).(func(*AgentDOConfig) *Agent); ok {
 		r0 = rf(doOptions)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*LoadBalancerMember)
+			r0 = ret.Get(0).(*Agent)
 		}
 	}
 

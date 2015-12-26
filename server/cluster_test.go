@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/bryanl/dolb/doa"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -99,20 +99,20 @@ func TestBootstrap(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		sessionMock := &doa.MockSession{}
+		sessionMock := &dao.MockSession{}
 
-		members := []doa.LoadBalancerMember{
+		members := []dao.Agent{
 			{ID: "1", ClusterID: "12345", Name: "lb-test-cluster-1"},
 			{ID: "2", ClusterID: "12345", Name: "lb-test-cluster-2"},
 			{ID: "3", ClusterID: "12345", Name: "lb-test-cluster-3"},
 		}
 
 		for _, m := range members {
-			cmr := &doa.CreateMemberRequest{ClusterID: m.ClusterID, Name: m.Name}
-			sessionMock.On("CreateLBMember", cmr).Return(&m, nil).Once()
+			cmr := &dao.CreateAgentRequest{ClusterID: m.ClusterID, Name: m.Name}
+			sessionMock.On("CreateAgent", cmr).Return(&m, nil).Once()
 		}
 
-		lb := &doa.LoadBalancer{ID: "12345"}
+		lb := &dao.LoadBalancer{ID: "12345"}
 
 		config := &Config{
 			ServerURL: "http://example.com",
@@ -137,7 +137,7 @@ func TestBootstrap_MissingName(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		lb := &doa.LoadBalancer{}
+		lb := &dao.LoadBalancer{}
 
 		config := &Config{
 			ServerURL: "http://example.com",
@@ -201,7 +201,7 @@ func TestUserData(t *testing.T) {
 		ServerURL: "http://example.com",
 	}
 
-	lb := &doa.LoadBalancer{ID: "lb-1"}
+	lb := &dao.LoadBalancer{ID: "lb-1"}
 	bo := &BootstrapOptions{
 		LoadBalancer:    lb,
 		Config:          config,

@@ -6,7 +6,7 @@ import (
 )
 
 type ClusterState interface {
-	Update(rr *RegisterRequest)
+	Update(rr *PingRequest)
 }
 
 type LiveClusterState struct {
@@ -24,7 +24,7 @@ func NewClusterState(c *Config) ClusterState {
 	}
 }
 
-func (lcs *LiveClusterState) Update(rr *RegisterRequest) {
+func (lcs *LiveClusterState) Update(rr *PingRequest) {
 	//lcs.logger.WithFields(logrus.Fields{
 	//"cluster-name": rr.ClusterName,
 	//}).Info("updating cluster state")
