@@ -60,9 +60,13 @@ func pingServer(config *Config) error {
 	b, err := json.Marshal(&rr)
 	buf := bytes.NewReader(b)
 
-	_, err = http.Post(u.String(), "application/json", buf)
+	resp, err := http.Post(u.String(), "application/json", buf)
 	if err != nil {
 		return err
+	}
+
+	if resp.StatusCode != 201 {
+		config.logger.WithField("status-code", resp.StatusCode).Warning("unable to ping server")
 	}
 
 	config.logger.WithFields(log.Fields{
