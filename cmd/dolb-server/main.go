@@ -18,9 +18,8 @@ const (
 
 var (
 	addr      = envflag.String("ADDR", ":8888", "listen address")
+	dbURL     = envflag.String("DB_URL", "", "URL for database")
 	serverURL = envflag.String("SERVER_URL", "", "URL for this service")
-	dbAddr    = envflag.String("DB_ADDR", "", "database address")
-	dbName    = envflag.String("DB_NAME", "dolb", "database name")
 )
 
 func main() {
@@ -30,11 +29,11 @@ func main() {
 		log.Fatal("SERVER_URL environment variable is required")
 	}
 
-	if *dbAddr == "" {
-		log.Fatal("DB_ADDR environment variable is required")
+	if *dbURL == "" {
+		log.Fatal("DB_URL environment variable is required")
 	}
 
-	sess, err := doa.NewSession(*dbAddr, *dbName)
+	sess, err := doa.NewSession(*dbURL)
 	if err != nil {
 		log.WithError(err).Fatal("could not create database connection")
 	}
@@ -57,8 +56,6 @@ func main() {
 
 		log.WithFields(log.Fields{
 			"addr":       *addr,
-			"db-addr":    *dbAddr,
-			"db-name":    *dbName,
 			"server-url": *serverURL,
 		}).Info("starting http listener")
 		errChan <- httpServer.ListenAndServe()

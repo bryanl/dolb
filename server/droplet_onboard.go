@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/digitalocean/godo"
 )
 
@@ -17,22 +18,26 @@ type DropletOnboard interface {
 type LiveDropletOnboard struct {
 	Droplet godo.Droplet
 
+	agentID    string
 	domain     string
 	godoClient *godo.Client
 	logger     *logrus.Entry
+	session    doa.Session
 
-	assignDNS               func(ldo *LiveDropletOnboard) error
+	assignDNS               func(ldo *LiveDropletOnboard) (*godo.DomainRecord, error)
 	publicIPV4Address       func(ldo *LiveDropletOnboard) (string, error)
 	waitUntilDropletCreated func(ldo *LiveDropletOnboard) error
 	createAction            func(ldo *LiveDropletOnboard) (*godo.Action, error)
 }
 
-func NewDropletOnboard(d godo.Droplet, client *godo.Client, config *Config) *LiveDropletOnboard {
+func NewDropletOnboard(d godo.Droplet, agentID string, client *godo.Client, config *Config) *LiveDropletOnboard {
 	return &LiveDropletOnboard{
 		Droplet:    d,
+		agentID:    agentID,
 		domain:     config.BaseDomain,
 		godoClient: client,
 		logger:     config.logger,
+		session:    config.DBSession,
 
 		assignDNS:               assignDNS,
 		publicIPV4Address:       publicIPV4Address,
@@ -44,21 +49,34 @@ func NewDropletOnboard(d godo.Droplet, client *godo.Client, config *Config) *Liv
 func (dro *LiveDropletOnboard) setup() {
 	logger := dro.logger.WithFields(logrus.Fields{
 		"droplet-id": dro.Droplet.ID,
+		"agent-id":   dro.agentID,
 	})
-	err := dro.assignDNS(dro)
+	r, err := dro.assignDNS(dro)
 	if err != nil {
 		logger.WithError(err).Error("unable to set up droplet in dns")
 		return
 	}
 
-	logger.Info("droplet setup")
+	adc := &doa.AgentDOConfig{
+		ID:        dro.agentID,
+		IPID:      r.ID,
+		DropletID: dro.Droplet.ID,
+	}
+	a, err := dro.session.UpdateAgentDOConfig(adc)
+	if err != nil {
+		logger.WithError(err).Error("unable to save agent info")
+	}
+
+	logger.WithFields(logrus.Fields{
+		"ip-id": a.IPID,
+	}).Info("droplet setup")
 }
 
 // assignDNS assigns a hostname in DNS for the droplet.
-func assignDNS(dro *LiveDropletOnboard) error {
+func assignDNS(dro *LiveDropletOnboard) (*godo.DomainRecord, error) {
 	ip, err := dro.publicIPV4Address(dro)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	name := fmt.Sprintf("%s.%s", dro.Droplet.Name, dro.Droplet.Region.Slug)
@@ -69,8 +87,8 @@ func assignDNS(dro *LiveDropletOnboard) error {
 		Data: ip,
 	}
 
-	_, _, err = dro.godoClient.Domains.CreateRecord(dro.domain, drer)
-	return err
+	r, _, err := dro.godoClient.Domains.CreateRecord(dro.domain, drer)
+	return r, err
 }
 
 // publicIPV4Address retrieves the public IPV4 address for a Droplet.

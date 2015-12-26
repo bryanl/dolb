@@ -14,7 +14,6 @@ import (
 	"github.com/bryanl/dolb/do"
 	"github.com/bryanl/dolb/doa"
 	"github.com/digitalocean/godo"
-	"github.com/satori/go.uuid"
 )
 
 const (
@@ -64,7 +63,6 @@ type BootstrapOptions struct {
 	BootstrapConfig *BootstrapConfig
 	LoadBalancer    *doa.LoadBalancer
 	Config          *Config
-	AgentID         string
 }
 
 // ClusterOps is an interface for cluster operations.
@@ -76,7 +74,7 @@ type ClusterOps interface {
 type clusterOps struct {
 	DiscoveryGenerator    func() (string, error)
 	GodoClientFactory     do.GodoClientFactoryFn
-	DropletOnboardFactory func(godo.Droplet, *godo.Client, *Config) DropletOnboard
+	DropletOnboardFactory func(godo.Droplet, string, *godo.Client, *Config) DropletOnboard
 }
 
 var _ ClusterOps = &clusterOps{}
@@ -86,8 +84,8 @@ func NewClusterOps() ClusterOps {
 	return &clusterOps{
 		DiscoveryGenerator: discoveryGenerator,
 		GodoClientFactory:  do.GodoClientFactory,
-		DropletOnboardFactory: func(d godo.Droplet, godoc *godo.Client, c *Config) DropletOnboard {
-			return NewDropletOnboard(d, godoc, c)
+		DropletOnboardFactory: func(d godo.Droplet, agentID string, godoc *godo.Client, c *Config) DropletOnboard {
+			return NewDropletOnboard(d, agentID, godoc, c)
 		},
 	}
 }
@@ -119,7 +117,18 @@ func (co *clusterOps) Bootstrap(bo *BootstrapOptions) error {
 
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("lb-%s-%d", bc.Name, i+1)
-		agentID := uuid.NewV4().String()
+
+		cmr := &doa.CreateMemberRequest{
+			ClusterID: bo.LoadBalancer.ID,
+			Name:      name,
+		}
+
+		a, err := bo.Config.DBSession.CreateLBMember(cmr)
+		if err != nil {
+			return err
+		}
+
+		agentID := a.ID
 
 		userData, err := co.userData(du, agentID, bo)
 		if err != nil {
@@ -141,7 +150,7 @@ func (co *clusterOps) Bootstrap(bo *BootstrapOptions) error {
 			return err
 		}
 
-		dro := co.DropletOnboardFactory(*droplet, godoc, config)
+		dro := co.DropletOnboardFactory(*droplet, agentID, godoc, config)
 		go dro.setup()
 	}
 

@@ -75,7 +75,8 @@ func withMockGodo(fn withMockGodoClusterOpts) {
 	co.GodoClientFactory = func(string) *godo.Client {
 		return gc
 	}
-	co.DropletOnboardFactory = func(godo.Droplet, *godo.Client, *Config) DropletOnboard {
+
+	co.DropletOnboardFactory = func(godo.Droplet, string, *godo.Client, *Config) DropletOnboard {
 		return &dropletOnboardMock{}
 	}
 
@@ -98,10 +99,24 @@ func TestBootstrap(t *testing.T) {
 			DigitalOceanToken: "token",
 		}
 
-		lb := &doa.LoadBalancer{}
+		sessionMock := &doa.MockSession{}
+
+		members := []doa.LoadBalancerMember{
+			{ID: "1", ClusterID: "12345", Name: "lb-test-cluster-1"},
+			{ID: "2", ClusterID: "12345", Name: "lb-test-cluster-2"},
+			{ID: "3", ClusterID: "12345", Name: "lb-test-cluster-3"},
+		}
+
+		for _, m := range members {
+			cmr := &doa.CreateMemberRequest{ClusterID: m.ClusterID, Name: m.Name}
+			sessionMock.On("CreateLBMember", cmr).Return(&m, nil).Once()
+		}
+
+		lb := &doa.LoadBalancer{ID: "12345"}
 
 		config := &Config{
 			ServerURL: "http://example.com",
+			DBSession: sessionMock,
 		}
 
 		bo := &BootstrapOptions{

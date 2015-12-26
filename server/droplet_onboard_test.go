@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,8 @@ func TestNewDropletOnboard(t *testing.T) {
 	d := godo.Droplet{}
 	godoc := &godo.Client{}
 	config := &Config{}
-	dro := NewDropletOnboard(d, godoc, config)
+	agentID := "agent-1"
+	dro := NewDropletOnboard(d, agentID, godoc, config)
 
 	assert.NotNil(t, dro)
 }
@@ -25,6 +27,7 @@ type ldoMocks struct {
 	ActionsService  *mocks.ActionsService
 	DomainsService  *mocks.DomainsService
 	DropletsService *mocks.DropletsService
+	Session         *doa.MockSession
 }
 
 func withLiveDropletOnboard(fn func(ldo *LiveDropletOnboard, lm *ldoMocks)) {
@@ -32,6 +35,7 @@ func withLiveDropletOnboard(fn func(ldo *LiveDropletOnboard, lm *ldoMocks)) {
 		ActionsService:  &mocks.ActionsService{},
 		DomainsService:  &mocks.DomainsService{},
 		DropletsService: &mocks.DropletsService{},
+		Session:         &doa.MockSession{},
 	}
 	d := godo.Droplet{
 		ID:     12345,
@@ -49,7 +53,8 @@ func withLiveDropletOnboard(fn func(ldo *LiveDropletOnboard, lm *ldoMocks)) {
 		Droplet:    d,
 		domain:     "lb.example.com",
 		godoClient: client,
-		logger:     logrus.WithField("test", "test"),
+		logger:     logrus.WithFields(logrus.Fields{}),
+		session:    lm.Session,
 
 		assignDNS:               assignDNS,
 		publicIPV4Address:       publicIPV4Address,
@@ -70,7 +75,7 @@ func Test_LiveDropletOnboard_assignDNS(t *testing.T) {
 			err      error
 			crReturn []interface{}
 		}{
-			{pass: true, ip: "8.8.8.8", err: nil, crReturn: []interface{}{nil, nil, nil}},
+			{pass: true, ip: "8.8.8.8", err: nil, crReturn: []interface{}{&godo.DomainRecord{ID: 1}, nil, nil}},
 			{err: errFail},
 		}
 
@@ -84,9 +89,10 @@ func Test_LiveDropletOnboard_assignDNS(t *testing.T) {
 				lm.DomainsService.On("CreateRecord", ldo.domain, drer).Return(c.crReturn...)
 			}
 
-			err := assignDNS(ldo)
+			r, err := assignDNS(ldo)
 			if c.pass {
 				assert.NoError(t, err)
+				assert.NotNil(t, r)
 			} else {
 				assert.Error(t, err)
 			}
@@ -146,14 +152,18 @@ func Test_LiveDropletOnboard_setup(t *testing.T) {
 
 		cases := []struct {
 			err error
+			dr  *godo.DomainRecord
 		}{
 			{err: errFail},
-			{err: nil},
+			{dr: &godo.DomainRecord{ID: 1}, err: nil},
 		}
 
+		lbm := &doa.LoadBalancerMember{}
+		lm.Session.On("UpdateAgentDOConfig", mock.Anything).Return(lbm, nil)
+
 		for _, c := range cases {
-			ldo.assignDNS = func(dro *LiveDropletOnboard) error {
-				return c.err
+			ldo.assignDNS = func(dro *LiveDropletOnboard) (*godo.DomainRecord, error) {
+				return c.dr, c.err
 			}
 			assert.NotPanics(t, func() { ldo.setup() })
 		}
