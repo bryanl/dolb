@@ -10,12 +10,12 @@ type MockSession struct {
 	mock.Mock
 }
 
-func (_m *MockSession) CreateLoadBalancer(name string, region string, logger *logrus.Entry) (*LoadBalancer, error) {
-	ret := _m.Called(name, region, logger)
+func (_m *MockSession) CreateLoadBalancer(name string, region string, dotoken string, logger *logrus.Entry) (*LoadBalancer, error) {
+	ret := _m.Called(name, region, dotoken, logger)
 
 	var r0 *LoadBalancer
-	if rf, ok := ret.Get(0).(func(string, string, *logrus.Entry) *LoadBalancer); ok {
-		r0 = rf(name, region, logger)
+	if rf, ok := ret.Get(0).(func(string, string, string, *logrus.Entry) *LoadBalancer); ok {
+		r0 = rf(name, region, dotoken, logger)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*LoadBalancer)
@@ -23,8 +23,8 @@ func (_m *MockSession) CreateLoadBalancer(name string, region string, logger *lo
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string, *logrus.Entry) error); ok {
-		r1 = rf(name, region, logger)
+	if rf, ok := ret.Get(1).(func(string, string, string, *logrus.Entry) error); ok {
+		r1 = rf(name, region, dotoken, logger)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,6 +73,27 @@ func (_m *MockSession) RetrieveAgent(id string) (*LoadBalancerMember, error) {
 
 	return r0, r1
 }
+func (_m *MockSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
+	ret := _m.Called(id)
+
+	var r0 *LoadBalancer
+	if rf, ok := ret.Get(0).(func(string) *LoadBalancer); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*LoadBalancer)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
 func (_m *MockSession) UpdateLBMember(umr *UpdateMemberRequest) error {
 	ret := _m.Called(umr)
 
@@ -105,4 +126,16 @@ func (_m *MockSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*LoadBalan
 	}
 
 	return r0, r1
+}
+func (_m *MockSession) UpdateLoadBalancer(_a0 *LoadBalancer) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*LoadBalancer) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }

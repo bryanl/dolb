@@ -18,7 +18,7 @@ func Test_LBCreateHandler(t *testing.T) {
 	sess := &doa.MockSession{}
 	lb := &doa.LoadBalancer{ID: "12345", Name: "lb-1"}
 
-	sess.On("CreateLoadBalancer", "lb-1", "dev0", mock.AnythingOfTypeArgument("*logrus.Entry")).Return(lb, nil)
+	sess.On("CreateLoadBalancer", "lb-1", "dev0", "do-token", mock.AnythingOfTypeArgument("*logrus.Entry")).Return(lb, nil)
 
 	config := &Config{
 		ClusterOpsFactory: func() ClusterOps {

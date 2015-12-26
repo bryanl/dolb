@@ -9,6 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/service"
+	"github.com/digitalocean/godo"
 )
 
 type RegisterRequest struct {
@@ -22,7 +23,8 @@ type RegisterRequest struct {
 
 func (rr *RegisterRequest) ToUpdateMemberRequest() *doa.UpdateMemberRequest {
 	return &doa.UpdateMemberRequest{
-		ID:         rr.ClusterID,
+		ID:         rr.AgentID,
+		ClusterID:  rr.ClusterID,
 		FloatingIP: rr.FloatingIP,
 		IsLeader:   rr.IsLeader,
 		Name:       rr.Host,
@@ -47,6 +49,38 @@ func RegisterHandler(c interface{}, r *http.Request) service.Response {
 	err := json.NewDecoder(r.Body).Decode(&rr)
 	if err != nil {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
+	}
+
+	lb, err := config.DBSession.RetrieveLoadBalancer(rr.ClusterID)
+	if err != nil {
+		config.logger.WithError(err).Error("could not retrieve load balancer")
+		return service.Response{Body: err, Status: 500}
+	}
+
+	if rr.IsLeader && lb.FloatingIP == "" {
+		// set floating ip
+		logrus.WithField("rr", fmt.Sprintf("%#v", rr)).Info("creating floating ip")
+
+		drer := &godo.DomainRecordEditRequest{
+			Type: "A",
+			Name: fmt.Sprintf("c-%s.%s", lb.Name, config.BaseDomain),
+			Data: rr.FloatingIP,
+		}
+
+		godoc := config.GodoClientFactory(lb.DigitalOceanToken)
+		r, _, err := godoc.Domains.CreateRecord(config.BaseDomain, drer)
+		if err != nil {
+			config.logger.WithError(err).Error("could not create floating ip dns entry")
+			return service.Response{Body: err, Status: 500}
+		}
+
+		lb.FloatingIPID = r.ID
+
+		err = config.DBSession.UpdateLoadBalancer(lb)
+		if err != nil {
+			config.logger.WithError(err).Error("could not update load balancer")
+			return service.Response{Body: err, Status: 500}
+		}
 	}
 
 	umr := rr.ToUpdateMemberRequest()

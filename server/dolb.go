@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/do"
 	"github.com/bryanl/dolb/doa"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
@@ -15,6 +16,7 @@ type Config struct {
 	ClusterOpsFactory func() ClusterOps
 	DBSession         doa.Session
 	ServerURL         string
+	GodoClientFactory do.GodoClientFactoryFn
 
 	logger *logrus.Entry
 }
@@ -26,6 +28,7 @@ func NewConfig(bd, su string, sess doa.Session) *Config {
 		ClusterOpsFactory: NewClusterOps,
 		DBSession:         sess,
 		ServerURL:         su,
+		GodoClientFactory: do.GodoClientFactory,
 	}
 }
 

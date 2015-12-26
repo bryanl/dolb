@@ -16,12 +16,16 @@ func TestRegisterHandler(t *testing.T) {
 	mockSession := &doa.MockSession{}
 	mockSession.On("UpdateLBMember", mock.AnythingOfTypeArgument("*doa.UpdateMemberRequest")).Return(nil)
 
+	lb := &doa.LoadBalancer{ID: "cluster-1"}
+	mockSession.On("RetrieveLoadBalancer", "cluster-1").Return(lb, nil)
+
 	c := &Config{
 		logger:    logrus.WithField("test", "test"),
 		DBSession: mockSession,
 	}
 
 	rReq := RegisterRequest{
+		ClusterID:   "cluster-1",
 		ClusterName: "cluster",
 		Host:        "host-1",
 	}

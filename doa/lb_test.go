@@ -48,11 +48,11 @@ func TestPgSession_CreateLoadBalancer(t *testing.T) {
 	withMockPgSession(t, func(sess *PgSession, mock sqlmock.Sqlmock, logger *logrus.Entry) {
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT INTO load_balancers").
-			WithArgs("1", "lb-1", "dev0").
+			WithArgs("1", "lb-1", "dev0", "token").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		lb, err := sess.CreateLoadBalancer("lb-1", "dev0", logger)
+		lb, err := sess.CreateLoadBalancer("lb-1", "dev0", "token", logger)
 		assert.NoError(t, err)
 
 		expected := &LoadBalancer{ID: "1", Name: "lb-1", Region: "dev0"}
@@ -63,7 +63,7 @@ func TestPgSession_CreateLoadBalancer(t *testing.T) {
 func TestPgSession_CreateLoadBalancer_TxBeginError(t *testing.T) {
 	withMockPgSession(t, func(sess *PgSession, mock sqlmock.Sqlmock, logger *logrus.Entry) {
 		mock.ExpectBegin().WillReturnError(errors.New("fail"))
-		_, err := sess.CreateLoadBalancer("lb-1", "dev0", logger)
+		_, err := sess.CreateLoadBalancer("lb-1", "dev0", "token", logger)
 		assert.Error(t, err)
 	})
 }
@@ -72,11 +72,11 @@ func TestPgSession_CreateLoadBalancer_TxExecError(t *testing.T) {
 	withMockPgSession(t, func(sess *PgSession, mock sqlmock.Sqlmock, logger *logrus.Entry) {
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT INTO load_balancers").
-			WithArgs("1", "lb-1", "dev0").
+			WithArgs("1", "lb-1", "dev0", "token").
 			WillReturnError(errors.New("fail"))
 		mock.ExpectRollback()
 
-		_, err := sess.CreateLoadBalancer("lb-1", "dev0", logger)
+		_, err := sess.CreateLoadBalancer("lb-1", "dev0", "token", logger)
 		assert.Error(t, err)
 	})
 }
@@ -121,13 +121,16 @@ func TestPgSession_UpdateLBMember_IsLeader(t *testing.T) {
 	withMockPgSession(t, func(sess *PgSession, mock sqlmock.Sqlmock, logger *logrus.Entry) {
 		mock.ExpectBegin()
 		mock.ExpectExec("UPDATE agents").WithArgs("agent-12345").WillReturnResult(sqlmock.NewResult(1, 1))
-		mock.ExpectExec("UPDATE load_balancers").WithArgs("agent-12345", "cluster-12345").WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec("UPDATE load_balancers").
+			WithArgs("agent-12345", "4.4.4.4", "cluster-12345").
+			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
 		umr := &UpdateMemberRequest{
-			ID:        "agent-12345",
-			ClusterID: "cluster-12345",
-			IsLeader:  true,
+			ID:         "agent-12345",
+			ClusterID:  "cluster-12345",
+			IsLeader:   true,
+			FloatingIP: "4.4.4.4",
 		}
 
 		err := sess.UpdateLBMember(umr)
@@ -142,8 +145,8 @@ func TestPgSession_UpdateAgentDO_Config(t *testing.T) {
 
 		rows := sqlmock.NewRows([]string{"id", "cluster_id", "droplet_id", "name", "ip_id", "last_seen_at"}).
 			AddRow("agent-1", "cluster-12345", 99, "lb-agent-1", 1, time.Now())
-		mock.ExpectCommit()
 		mock.ExpectQuery("SELECT .*").WithArgs("agent-1").WillReturnRows(rows)
+		mock.ExpectCommit()
 
 		dopt := &AgentDOConfig{
 			IPID:      1,

@@ -12,12 +12,14 @@ import (
 )
 
 type LoadBalancer struct {
-	ID         string
-	Name       string
-	Region     string
-	Leader     string
-	FloatingIP string
-	Members    []LoadBalancerMember
+	ID                string         `db:"id"`
+	Name              string         `db:"name"`
+	Region            string         `db:"region"`
+	Leader            sql.NullString `db:"leader"`
+	FloatingIP        string         `db:"floating_ip"`
+	FloatingIPID      int            `db:"floating_ip_id"`
+	DigitalOceanToken string         `db:"digitalocean_access_token"`
+	Members           []LoadBalancerMember
 }
 
 type LoadBalancerMember struct {
@@ -50,11 +52,13 @@ type AgentDOConfig struct {
 }
 
 type Session interface {
-	CreateLoadBalancer(name, region string, logger *logrus.Entry) (*LoadBalancer, error)
+	CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error)
 	CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMember, error)
 	RetrieveAgent(id string) (*LoadBalancerMember, error)
+	RetrieveLoadBalancer(id string) (*LoadBalancer, error)
 	UpdateLBMember(umr *UpdateMemberRequest) error
 	UpdateAgentDOConfig(doOptions *AgentDOConfig) (*LoadBalancerMember, error)
+	UpdateLoadBalancer(*LoadBalancer) error
 }
 
 type sqlOpenerFn func(string) (*sqlx.DB, error)
@@ -87,7 +91,7 @@ type PgSession struct {
 
 var _ Session = &PgSession{}
 
-func (ps *PgSession) CreateLoadBalancer(name, region string, logger *logrus.Entry) (*LoadBalancer, error) {
+func (ps *PgSession) CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error) {
 	tx, err := ps.db.Begin()
 	if err != nil {
 		return nil, err
@@ -103,8 +107,9 @@ func (ps *PgSession) CreateLoadBalancer(name, region string, logger *logrus.Entr
 	}()
 
 	id := ps.idGen()
-
-	if _, err := tx.Exec("INSERT INTO load_balancers (id, name, region) VALUES ($1, $2, $3)", id, name, region); err != nil {
+	q := "INSERT INTO load_balancers (id, name, region, digitalocean_access_token) VALUES ($1, $2, $3, $4)"
+	_, err = tx.Exec(q, id, name, region, dotoken)
+	if err != nil {
 		return nil, err
 	}
 
@@ -132,7 +137,8 @@ func (ps *PgSession) CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMemb
 
 	id := ps.idGen()
 
-	if _, err := tx.Exec(`INSERT INTO agents (id, cluster_id, name, last_seen_at) VALUES ($1, $2, $3, NOW())`, id, cmr.ClusterID, cmr.Name); err != nil {
+	_, err = tx.Exec(`INSERT INTO agents (id, cluster_id, name, last_seen_at) VALUES ($1, $2, $3, NOW())`, id, cmr.ClusterID, cmr.Name)
+	if err != nil {
 		return nil, err
 	}
 
@@ -144,9 +150,27 @@ func (ps *PgSession) CreateLBMember(cmr *CreateMemberRequest) (*LoadBalancerMemb
 }
 
 func (ps *PgSession) RetrieveAgent(id string) (*LoadBalancerMember, error) {
-	lb := &LoadBalancerMember{}
-	if err := ps.db.Get(lb, "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE id = $1", id); err != nil {
+	a := &LoadBalancerMember{}
+	if err := ps.db.Get(a, "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE id = $1", id); err != nil {
 		logrus.WithError(err).Error("retrieve-agent")
+		return nil, err
+	}
+
+	return a, nil
+}
+
+func (ps *PgSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
+	lb := &LoadBalancer{}
+	q := "SELECT id, name, region, leader, floating_ip, floating_ip_id, digitalocean_access_token FROM load_balancers WHERE id = $1"
+	if err := ps.db.Get(lb, q, id); err != nil {
+		logrus.WithError(err).Error("retrieve-load-balancer lb")
+		return nil, err
+	}
+
+	lb.Members = []LoadBalancerMember{}
+	q = "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE cluster_id = $1"
+	if err := ps.db.Select(&lb.Members, q, id); err != nil {
+		logrus.WithError(err).Error("retrieve-load-balancer agents")
 		return nil, err
 	}
 
@@ -168,18 +192,27 @@ func (ps *PgSession) UpdateLBMember(umr *UpdateMemberRequest) error {
 		}
 	}()
 
-	if _, err := tx.Exec(`
+	_, err = tx.Exec(`
 	UPDATE agents
 	SET last_seen_at = NOW()
-	WHERE id = $1`, umr.ID); err != nil {
+	WHERE id = $1`, umr.ID)
+
+	if err != nil {
 		return err
 	}
 
 	if umr.IsLeader {
-		if _, err := tx.Exec(`
+		logrus.WithFields(logrus.Fields{
+			"leader":     umr.ID,
+			"cluster-id": umr.ClusterID,
+		}).Info("updating cluster leader")
+		_, err = tx.Exec(`
 		UPDATE load_balancers
-		SET leader = $1
-		WHERE id = $2`, umr.ID, umr.ClusterID); err != nil {
+		SET leader = $1,
+		floating_ip = $2
+		WHERE id = $3`, umr.ID, umr.FloatingIP, umr.ClusterID)
+
+		if err != nil {
 			return err
 		}
 	}
@@ -193,22 +226,56 @@ func (ps *PgSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*LoadBalance
 		return nil, err
 	}
 
-	if _, err := tx.Exec(`
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.Exec(`
 	UPDATE agents
 	SET ip_id = $1,
 	droplet_id = $2 
-	WHERE id = $3`, doOptions.IPID, doOptions.DropletID, doOptions.ID); err != nil {
+	WHERE id = $3`, doOptions.IPID, doOptions.DropletID, doOptions.ID)
+
+	if err != nil {
 		logrus.WithError(err).Error("update-do-config")
 		return nil, fmt.Errorf("cannot update agent: %v", err)
 	}
 
-	err = tx.Commit()
+	return ps.RetrieveAgent(doOptions.ID)
+}
+
+func (ps *PgSession) UpdateLoadBalancer(lb *LoadBalancer) error {
+	tx, err := ps.db.Begin()
 	if err != nil {
-		tx.Rollback()
-		return nil, err
+		return err
 	}
 
-	return ps.RetrieveAgent(doOptions.ID)
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.Exec(`
+	UPDATE load_balancers
+	SET floating_ip = $1,
+	floating_ip_id = $2 
+	WHERE id = $3`, lb.FloatingIP, lb.FloatingIPID, lb.ID)
+
+	if err != nil {
+		logrus.WithError(err).Error("update-floating-ip")
+		return fmt.Errorf("cannot update floating ip: %v", err)
+	}
+
+	return nil
 }
 
 func idGen() string {
