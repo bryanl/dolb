@@ -22,6 +22,14 @@ type LoadBalancer struct {
 	Members           []Agent
 }
 
+func (lb *LoadBalancer) LeaderString() string {
+	if lb.Leader.Valid {
+		return lb.Leader.String
+	}
+
+	return ""
+}
+
 type Agent struct {
 	ID         string    `db:"id"`
 	ClusterID  string    `db:"cluster_id"`
@@ -54,6 +62,7 @@ type AgentDOConfig struct {
 type Session interface {
 	CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error)
 	CreateAgent(cmr *CreateAgentRequest) (*Agent, error)
+	ListLoadBalancers() ([]LoadBalancer, error)
 	RetrieveAgent(id string) (*Agent, error)
 	RetrieveLoadBalancer(id string) (*LoadBalancer, error)
 	UpdateAgent(umr *UpdateAgentRequest) error
@@ -147,6 +156,17 @@ func (ps *PgSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
 		Name:      cmr.Name,
 		ClusterID: cmr.ClusterID,
 	}, nil
+}
+
+func (ps *PgSession) ListLoadBalancers() ([]LoadBalancer, error) {
+	var lbs = []LoadBalancer{}
+	err := ps.db.Select(&lbs, `SELECT id, name, region, leader, floating_ip, floating_ip_id, digitalocean_access_token
+	FROM load_balancers`)
+	if err != nil {
+		return nil, err
+	}
+
+	return lbs, nil
 }
 
 func (ps *PgSession) RetrieveAgent(id string) (*Agent, error) {

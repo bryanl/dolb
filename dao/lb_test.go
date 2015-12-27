@@ -101,6 +101,20 @@ func TestPgSession_CreateLoadBalancerMember(t *testing.T) {
 	})
 }
 
+func TestPgSession_ListLoadbalancers(t *testing.T) {
+	withMockPgSession(t, func(sess *PgSession, mock sqlmock.Sqlmock, logger *logrus.Entry) {
+		rows := sqlmock.NewRows([]string{"id", "name", "region", "leader", "floating_ip", "floating_ip_id", "digitalocean_access_token"}).
+			AddRow("1", "cluster-1", "dev0", "lb-agent-1", "4.4.4.4", 1, "12345").
+			AddRow("2", "cluster-2", "dev0", "lb-agent-2", "4.4.4.5", 2, "12345")
+
+		mock.ExpectQuery("SELECT (.*?) FROM load_balancers").WillReturnRows(rows)
+
+		lbs, err := sess.ListLoadBalancers()
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(lbs))
+	})
+}
+
 func TestPgSession_UpdateLBMember(t *testing.T) {
 	withMockPgSession(t, func(sess *PgSession, mock sqlmock.Sqlmock, logger *logrus.Entry) {
 		mock.ExpectBegin()

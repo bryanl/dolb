@@ -16,3 +16,5 @@ import:
 - package: github.com/jmoiron/sqlx
 - package: github.com/lib/pq
 - package: gopkg.in/DATA-DOG/go-sqlmock.v1
+- package: github.com/onsi/ginkgo
+- package: github.com/onsi/gomega

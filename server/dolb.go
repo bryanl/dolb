@@ -51,6 +51,7 @@ func New(config *Config) (*API, error) {
 		return nil, errors.New("missing ServerURL")
 	}
 
+	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBListHandler}).Methods("GET")
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
 	a.Mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 

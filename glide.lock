@@ -1,5 +1,5 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-25T23:40:47.53992975-05:00
+updated: 2015-12-26T22:57:37.953265803-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -26,7 +26,7 @@ imports:
 - name: github.com/codegangsta/negroni
   version: c7477ad8e330bef55bf1ebe300cf8aa67c492d1b
 - name: github.com/coreos/etcd
-  version: 70bcde89bcd6ef3de547f8fab1c1d29ee18f3704
+  version: 729b530c489a73532843e664ae9c6db5c686d314
 - name: github.com/coreos/go-etcd
   version: 003851be7bb0694fe3cc457a49529a19388ee7cf
 - name: github.com/coreos/go-semver
@@ -117,6 +117,10 @@ imports:
   version: 281073eb9eb092240d33ef253c404f1cca550309
 - name: github.com/olekukonko/ts
   version: ecf753e7c962639ab5a1fb46f7da627d4c0a04b8
+- name: github.com/onsi/ginkgo
+  version: e43390e35a4a88f3f95d5ddf9055efb7a1170469
+- name: github.com/onsi/gomega
+  version: 0fe204460da2c8fa1babcaac196e694de8f1aaa1
 - name: github.com/prometheus/client_golang
   version: e51041b3fa41cece0dca035740ba6411905be473
   subpackages:
