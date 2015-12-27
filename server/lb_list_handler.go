@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 )
 
@@ -19,6 +20,20 @@ type LoadBalancer struct {
 	Leader     string     `json:"leader"`
 	Region     string     `json:"region"`
 	FloatingIP FloatingIP `json:"floating_ip"`
+}
+
+// NewLoadBalancerFromDAO converts a dao LoadBalancer to an API LoadBalancer.
+func NewLoadBalancerFromDAO(lb dao.LoadBalancer) LoadBalancer {
+	return LoadBalancer{
+		ID:     lb.ID,
+		Name:   lb.Name,
+		Leader: lb.LeaderString(),
+		Region: lb.Region,
+		FloatingIP: FloatingIP{
+			ID:        lb.FloatingIPID,
+			IPAddress: lb.FloatingIP,
+		},
+	}
 }
 
 // FloatingIP is a floating ip.
@@ -40,16 +55,7 @@ func LBListHandler(c interface{}, r *http.Request) service.Response {
 	lbr := LoadBalancersResponse{}
 	lbr.LoadBalancers = make([]LoadBalancer, len(dbLBS))
 	for i, lb := range dbLBS {
-		lbr.LoadBalancers[i] = LoadBalancer{
-			ID:     lb.ID,
-			Name:   lb.Name,
-			Leader: lb.LeaderString(),
-			Region: lb.Region,
-			FloatingIP: FloatingIP{
-				ID:        lb.FloatingIPID,
-				IPAddress: lb.FloatingIP,
-			},
-		}
+		lbr.LoadBalancers[i] = NewLoadBalancerFromDAO(lb)
 	}
 
 	return service.Response{Body: lbr, Status: http.StatusOK}

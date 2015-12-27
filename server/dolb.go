@@ -32,6 +32,7 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 	}
 }
 
+// SetLogger sets a logger for config.
 func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
 }
@@ -53,6 +54,7 @@ func New(config *Config) (*API, error) {
 
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBListHandler}).Methods("GET")
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
+	a.Mux.Handle("/lb/{lb_id}", service.Handler{Config: config, F: LBRetrieveHandler}).Methods("GET")
 	a.Mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 
 	return a, nil
