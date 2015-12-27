@@ -59,6 +59,7 @@ type RemoteSyslog struct {
 	Port      int    `json:"port"`
 }
 
+// BootstrapOptions are options for the bootstrap process.
 type BootstrapOptions struct {
 	BootstrapConfig *BootstrapConfig
 	LoadBalancer    *dao.LoadBalancer
@@ -151,7 +152,7 @@ func (co *clusterOps) Bootstrap(bo *BootstrapOptions) error {
 		}
 
 		dro := co.DropletOnboardFactory(*droplet, agentID, godoc, config)
-		go dro.setup()
+		go dro.Setup()
 	}
 
 	return nil

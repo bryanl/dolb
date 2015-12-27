@@ -61,7 +61,7 @@ type godoMocks struct {
 
 type dropletOnboardMock struct{}
 
-func (dom *dropletOnboardMock) setup() {}
+func (dom *dropletOnboardMock) Setup() {}
 
 func withMockGodo(fn withMockGodoClusterOpts) {
 	co := &clusterOps{}

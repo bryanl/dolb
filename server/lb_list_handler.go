@@ -7,10 +7,12 @@ import (
 	"github.com/bryanl/dolb/service"
 )
 
+// LoadBalancersResponse is a response with load balancers.
 type LoadBalancersResponse struct {
 	LoadBalancers []LoadBalancer `json:"load_balancers"`
 }
 
+// LoadBalancer is a load balancer.
 type LoadBalancer struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
@@ -19,11 +21,13 @@ type LoadBalancer struct {
 	FloatingIP FloatingIP `json:"floating_ip"`
 }
 
+// FloatingIP is a floating ip.
 type FloatingIP struct {
 	ID        int    `json:"id"`
 	IPAddress string `json:"ip_address"`
 }
 
+// LBListHandler is a handler for listing load balancers.
 func LBListHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 

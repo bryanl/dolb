@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// MkdirError is an a kvs mkdir error.
 type MkdirError struct {
 	dir string
 	err error
@@ -17,6 +18,7 @@ func (mde *MkdirError) Error() string {
 	return fmt.Sprintf("could not create %q directory: %v", mde.dir, mde.err)
 }
 
+// KVError is a general kvs error.
 type KVError struct {
 	key string
 	err error
@@ -26,6 +28,7 @@ func (ke *KVError) Error() string {
 	return fmt.Sprintf("could not set %q: %v", ke.key, ke.err)
 }
 
+// KVDeleteError is a error while deleting an entry from the kvs.
 type KVDeleteError struct {
 	key string
 	err error
@@ -35,6 +38,7 @@ func (kde *KVDeleteError) Error() string {
 	return fmt.Sprintf("could not delete %q: %v", kde.key, kde.err)
 }
 
+// Node represents an entry in the kvs.
 type Node struct {
 	CreatedIndex  uint64
 	Dir           bool
@@ -45,8 +49,10 @@ type Node struct {
 	Value         string
 }
 
+// Nodes is a slice of Node pointers.
 type Nodes []*Node
 
+// KVS is an interface for operations on a kvs.
 type KVS interface {
 	Delete(key string) error
 	Get(key string, options *GetOptions) (*Node, error)
@@ -55,15 +61,18 @@ type KVS interface {
 	Set(key, value string, options *SetOptions) (*Node, error)
 }
 
+// GetOptions are options for get operations.
 type GetOptions struct {
 	Recursive bool
 }
 
+// SetOptions are options for set operations.
 type SetOptions struct {
 	TTL       time.Duration
 	PrevIndex uint64
 }
 
+// EtcdKVS is a kvs based on etcd.
 type EtcdKVS struct {
 	ctx   context.Context
 	ksapi etcdclient.KeysAPI
@@ -71,6 +80,7 @@ type EtcdKVS struct {
 
 var _ KVS = &EtcdKVS{}
 
+// NewEtcdKVS builds a EtcdKVS instance.
 func NewEtcdKVS(ctx context.Context, ksapi etcdclient.KeysAPI) *EtcdKVS {
 	return &EtcdKVS{
 		ctx:   ctx,
@@ -78,6 +88,7 @@ func NewEtcdKVS(ctx context.Context, ksapi etcdclient.KeysAPI) *EtcdKVS {
 	}
 }
 
+// Mkdir makes a directory in the kvs.
 func (ekvs *EtcdKVS) Mkdir(dir string) error {
 	opts := &etcdclient.SetOptions{
 		Dir: true,
@@ -94,6 +105,7 @@ func (ekvs *EtcdKVS) Mkdir(dir string) error {
 	return nil
 }
 
+// Set creates or updates a key in the kvs.
 func (ekvs *EtcdKVS) Set(key, value string, options *SetOptions) (*Node, error) {
 	if options == nil {
 		options = &SetOptions{}
@@ -117,6 +129,7 @@ func (ekvs *EtcdKVS) Set(key, value string, options *SetOptions) (*Node, error) 
 	return n, nil
 }
 
+// Get retrieves a key from the kvs.
 func (ekvs *EtcdKVS) Get(key string, options *GetOptions) (*Node, error) {
 	if options == nil {
 		options = &GetOptions{}
@@ -142,6 +155,7 @@ func (ekvs *EtcdKVS) Get(key string, options *GetOptions) (*Node, error) {
 	return n, nil
 }
 
+// convertNode converts an etcd client Node to a Node.
 func (ekvs *EtcdKVS) convertNode(in *etcdclient.Node) *Node {
 	return &Node{
 		CreatedIndex:  in.CreatedIndex,
@@ -154,6 +168,7 @@ func (ekvs *EtcdKVS) convertNode(in *etcdclient.Node) *Node {
 	}
 }
 
+// Rmdir removes a directory from the kvs.
 func (ekvs *EtcdKVS) Rmdir(dir string) error {
 	opts := &etcdclient.DeleteOptions{
 		Dir: true,
@@ -170,6 +185,7 @@ func (ekvs *EtcdKVS) Rmdir(dir string) error {
 	return nil
 }
 
+// Delete deletes a key from the kvs.
 func (ekvs *EtcdKVS) Delete(key string) error {
 	opts := &etcdclient.DeleteOptions{}
 
@@ -184,16 +200,19 @@ func (ekvs *EtcdKVS) Delete(key string) error {
 	return nil
 }
 
+// HaproxyKVS is a haproxy management kvs.
 type HaproxyKVS struct {
 	KVS
 }
 
+// NewHaproxyKVS builds a HaproxyKVS instance.
 func NewHaproxyKVS(backend KVS) *HaproxyKVS {
 	return &HaproxyKVS{
 		KVS: backend,
 	}
 }
 
+// Init initializes a kvs for haproxy configuration management.
 func (hkvs *HaproxyKVS) Init() error {
 	err := hkvs.Mkdir("/haproxy-discover/services")
 	if err != nil {
@@ -208,34 +227,40 @@ func (hkvs *HaproxyKVS) Init() error {
 	return nil
 }
 
+// Domain creates an endpoint based on a domain name.
 func (hkvs *HaproxyKVS) Domain(app, domain string) error {
 	key := fmt.Sprintf("/haproxy-discover/services/%s/domain", app)
 	_, err := hkvs.Set(key, domain, nil)
 	return err
 }
 
+// URLReg creates an endpoint based on a regular expression.
 func (hkvs *HaproxyKVS) URLReg(app, reg string) error {
 	key := fmt.Sprintf("/haproxy-discover/services/%s/url_reg", app)
 	_, err := hkvs.Set(key, reg, nil)
 	return err
 }
 
+// Upstream sets a new upstream node.
 func (hkvs *HaproxyKVS) Upstream(app, service, address string) error {
 	key := fmt.Sprintf("/haproxy-discover/services/%s/upstreams/%s", app, service)
 	_, err := hkvs.Set(key, address, nil)
 	return err
 }
 
+// FipKVS is a floating ip management kvs.
 type FipKVS struct {
 	KVS
 }
 
+// NewFipKVS builds a FipKVS instance.
 func NewFipKVS(backend KVS) *FipKVS {
 	return &FipKVS{
 		KVS: backend,
 	}
 }
 
+// CmKVS is a cluster management kvs.
 type CmKVS struct {
 	KVS
 
@@ -243,6 +268,7 @@ type CmKVS struct {
 	LeaderKey string
 }
 
+// NewCmKVS builds a CmKVS instance.
 func NewCmKVS(backend KVS, checkTTL time.Duration) *CmKVS {
 	return &CmKVS{
 		KVS:       backend,
@@ -251,6 +277,7 @@ func NewCmKVS(backend KVS, checkTTL time.Duration) *CmKVS {
 	}
 }
 
+// RegisterAgent register an agent in the kvs.
 func (ckvs *CmKVS) RegisterAgent(name string) (uint64, error) {
 	opts := &SetOptions{
 		TTL: ckvs.CheckTTL,
@@ -265,11 +292,13 @@ func (ckvs *CmKVS) RegisterAgent(name string) (uint64, error) {
 	return node.ModifiedIndex, nil
 }
 
+// Leader is a leader.
 type Leader struct {
 	Name      string
 	NodeCount int
 }
 
+// Leader returns a leader based on a key's CreatedIndex.
 func (ckvs *CmKVS) Leader() (*Leader, error) {
 	opts := &GetOptions{Recursive: true}
 	rootNode, err := ckvs.Get(ckvs.LeaderKey, opts)
@@ -297,6 +326,7 @@ func (ckvs *CmKVS) Leader() (*Leader, error) {
 	}, nil
 }
 
+// Refresh refreshes a key with a new TTL.
 func (ckvs *CmKVS) Refresh(name string, lastIndex uint64) (uint64, error) {
 	opts := &SetOptions{
 		TTL:       ckvs.CheckTTL,

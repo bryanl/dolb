@@ -12,6 +12,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// PingRequest is a ping call from an agent.
 type PingRequest struct {
 	AgentID     string `json:"agent_id"`
 	ClusterID   string `json:"cluster_id"`
@@ -21,7 +22,8 @@ type PingRequest struct {
 	IsLeader    bool   `json:"is_leader"`
 }
 
-func (pr *PingRequest) ToUpdateMemberRequest() *dao.UpdateAgentRequest {
+// ToUpdateAgentRequest converts a PingRequest to a dao.UpdateAgentRequest.
+func (pr *PingRequest) ToUpdateAgentRequest() *dao.UpdateAgentRequest {
 	return &dao.UpdateAgentRequest{
 		ID:         pr.AgentID,
 		ClusterID:  pr.ClusterID,
@@ -31,16 +33,19 @@ func (pr *PingRequest) ToUpdateMemberRequest() *dao.UpdateAgentRequest {
 	}
 }
 
-type RegisterResponse struct {
-	RegisteredAt time.Time
+// PongResponse is a response to an agent ping request.
+type PongResponse struct {
+	PongedAt time.Time
 }
 
-func NewRegisterResponse() *RegisterResponse {
-	return &RegisterResponse{
-		RegisteredAt: time.Now(),
+// NewPongResponse builds an instance of PongResponse.
+func NewPongResponse() *PongResponse {
+	return &PongResponse{
+		PongedAt: time.Now(),
 	}
 }
 
+// PingHandler is an api that responds to agent pings.
 func PingHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 	defer r.Body.Close()
@@ -80,7 +85,7 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 		}
 	}
 
-	umr := rr.ToUpdateMemberRequest()
+	umr := rr.ToUpdateAgentRequest()
 	err = config.DBSession.UpdateAgent(umr)
 	if err != nil {
 		config.logger.WithError(err).Error("could not update member")
@@ -96,6 +101,6 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 		"is-leader":    rr.IsLeader,
 	}).Info("ping request")
 
-	rResp := NewRegisterResponse()
+	rResp := NewPongResponse()
 	return service.Response{Body: rResp, Status: http.StatusCreated}
 }

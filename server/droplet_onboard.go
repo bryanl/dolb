@@ -10,11 +10,12 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// DropletOnboard is an interface for onboarding droplets.
 type DropletOnboard interface {
-	setup()
+	Setup()
 }
 
-// DropletOnboard onboards a droplet.
+// LiveDropletOnboard onboards a droplet.
 type LiveDropletOnboard struct {
 	Droplet godo.Droplet
 
@@ -30,6 +31,7 @@ type LiveDropletOnboard struct {
 	createAction            func(ldo *LiveDropletOnboard) (*godo.Action, error)
 }
 
+// NewDropletOnboard builds a LiveDropletOnboard instance.
 func NewDropletOnboard(d godo.Droplet, agentID string, client *godo.Client, config *Config) *LiveDropletOnboard {
 	return &LiveDropletOnboard{
 		Droplet:    d,
@@ -46,7 +48,8 @@ func NewDropletOnboard(d godo.Droplet, agentID string, client *godo.Client, conf
 	}
 }
 
-func (dro *LiveDropletOnboard) setup() {
+// Setup sets up a droplet after it has been created.
+func (dro *LiveDropletOnboard) Setup() {
 	logger := dro.logger.WithFields(logrus.Fields{
 		"droplet-id": dro.Droplet.ID,
 		"agent-id":   dro.agentID,

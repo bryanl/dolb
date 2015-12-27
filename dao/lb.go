@@ -7,10 +7,12 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"github.com/satori/go.uuid"
+
+	_ "github.com/lib/pq" // we are using postgresql
 )
 
+// LoadBalancer is a load balancer.
 type LoadBalancer struct {
 	ID                string         `db:"id"`
 	Name              string         `db:"name"`
@@ -22,6 +24,7 @@ type LoadBalancer struct {
 	Members           []Agent
 }
 
+// LeaderString returns leader as a string.
 func (lb *LoadBalancer) LeaderString() string {
 	if lb.Leader.Valid {
 		return lb.Leader.String
@@ -30,6 +33,7 @@ func (lb *LoadBalancer) LeaderString() string {
 	return ""
 }
 
+// Agent is a load balancer agent.
 type Agent struct {
 	ID         string    `db:"id"`
 	ClusterID  string    `db:"cluster_id"`
@@ -39,11 +43,13 @@ type Agent struct {
 	LastSeenAt time.Time `db:"last_seen_at"`
 }
 
+// CreateAgentRequest is a request for creating an agent.
 type CreateAgentRequest struct {
 	ClusterID string
 	Name      string
 }
 
+// UpdateAgentRequest is a request for updating an agent.
 type UpdateAgentRequest struct {
 	ID         string
 	ClusterID  string
@@ -53,12 +59,14 @@ type UpdateAgentRequest struct {
 	Name       string
 }
 
+// AgentDOConfig is a digitalocean configuration for an agent.
 type AgentDOConfig struct {
 	ID        string
 	DropletID int
 	IPID      int
 }
 
+// Session is an interface for persisting load balancer and agent data.
 type Session interface {
 	CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error)
 	CreateAgent(cmr *CreateAgentRequest) (*Agent, error)
@@ -80,6 +88,7 @@ var sqlOpener = func(dsn string) (*sqlx.DB, error) {
 	return sqlx.NewDb(db, "postgres"), nil
 }
 
+// NewSession builds an instance of PgSession.
 func NewSession(dbURL string) (Session, error) {
 	db, err := sqlOpener(dbURL)
 	if err != nil {
@@ -92,6 +101,7 @@ func NewSession(dbURL string) (Session, error) {
 	}, nil
 }
 
+// PgSession is a session backed by postgresql.
 type PgSession struct {
 	db *sqlx.DB
 
@@ -100,6 +110,7 @@ type PgSession struct {
 
 var _ Session = &PgSession{}
 
+// CreateLoadBalancer creates a load balancer.
 func (ps *PgSession) CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error) {
 	tx, err := ps.db.Begin()
 	if err != nil {
@@ -129,6 +140,7 @@ func (ps *PgSession) CreateLoadBalancer(name, region, dotoken string, logger *lo
 	}, nil
 }
 
+// CreateAgent creates an agent.
 func (ps *PgSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
 	tx, err := ps.db.Begin()
 	if err != nil {
@@ -158,6 +170,7 @@ func (ps *PgSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
 	}, nil
 }
 
+// ListLoadBalancers lists all load balancers.
 func (ps *PgSession) ListLoadBalancers() ([]LoadBalancer, error) {
 	var lbs = []LoadBalancer{}
 	err := ps.db.Select(&lbs, `SELECT id, name, region, leader, floating_ip, floating_ip_id, digitalocean_access_token
@@ -169,6 +182,7 @@ func (ps *PgSession) ListLoadBalancers() ([]LoadBalancer, error) {
 	return lbs, nil
 }
 
+// RetrieveAgent retrieves an agent by id.
 func (ps *PgSession) RetrieveAgent(id string) (*Agent, error) {
 	a := &Agent{}
 	if err := ps.db.Get(a, "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE id = $1", id); err != nil {
@@ -179,6 +193,7 @@ func (ps *PgSession) RetrieveAgent(id string) (*Agent, error) {
 	return a, nil
 }
 
+// RetrieveLoadBalancer retrieves a load balancer by id.
 func (ps *PgSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
 	lb := &LoadBalancer{}
 	q := "SELECT id, name, region, leader, floating_ip, floating_ip_id, digitalocean_access_token FROM load_balancers WHERE id = $1"
@@ -197,6 +212,7 @@ func (ps *PgSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
 	return lb, nil
 }
 
+// UpdateAgent updates an agent.
 func (ps *PgSession) UpdateAgent(umr *UpdateAgentRequest) error {
 	tx, err := ps.db.Begin()
 	if err != nil {
@@ -240,6 +256,7 @@ func (ps *PgSession) UpdateAgent(umr *UpdateAgentRequest) error {
 	return nil
 }
 
+// UpdateAgentDOConfig updates an Agent's DigitalOcean config.
 func (ps *PgSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, error) {
 	tx, err := ps.db.Begin()
 	if err != nil {
@@ -269,6 +286,7 @@ func (ps *PgSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, erro
 	return ps.RetrieveAgent(doOptions.ID)
 }
 
+// UpdateLoadBalancer updates a load balancer.
 func (ps *PgSession) UpdateLoadBalancer(lb *LoadBalancer) error {
 	tx, err := ps.db.Begin()
 	if err != nil {

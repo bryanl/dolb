@@ -165,7 +165,7 @@ func Test_LiveDropletOnboard_setup(t *testing.T) {
 			ldo.assignDNS = func(dro *LiveDropletOnboard) (*godo.DomainRecord, error) {
 				return c.dr, c.err
 			}
-			assert.NotPanics(t, func() { ldo.setup() })
+			assert.NotPanics(t, func() { ldo.Setup() })
 		}
 	})
 }
