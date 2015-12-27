@@ -65,20 +65,26 @@ type Agent struct {
 type IPAddresses map[string]string
 
 type DNSEntry struct {
+	RecordID int
+	Domain   string
+	Name     string
+	Type     string
 }
 
 type FloatingIP struct {
 }
 
 type LiveDigitalOcean struct {
-	Client *godo.Client
+	Client     *godo.Client
+	BaseDomain string
 }
 
 var _ DigitalOcean = &LiveDigitalOcean{}
 
-func NewLiveDigitalOcean(client *godo.Client) *LiveDigitalOcean {
+func NewLiveDigitalOcean(client *godo.Client, baseDomain string) *LiveDigitalOcean {
 	return &LiveDigitalOcean{
-		Client: client,
+		Client:     client,
+		BaseDomain: baseDomain,
 	}
 }
 
@@ -175,7 +181,24 @@ func (ldo *LiveDigitalOcean) DeleteAgent(id int) error {
 }
 
 func (ldo *LiveDigitalOcean) CreateDNS(name, ipAddress string) (*DNSEntry, error) {
-	return nil, nil
+
+	drer := &godo.DomainRecordEditRequest{
+		Type: "A",
+		Name: name,
+		Data: ipAddress,
+	}
+
+	r, _, err := ldo.Client.Domains.CreateRecord(ldo.BaseDomain, drer)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DNSEntry{
+		RecordID: r.ID,
+		Domain:   ldo.BaseDomain,
+		Name:     name,
+		Type:     "A",
+	}, nil
 }
 
 func (ldo *LiveDigitalOcean) DeleteDNS(id int) error {
