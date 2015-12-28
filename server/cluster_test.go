@@ -1,230 +1,152 @@
-package server
+package server_test
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"strconv"
-	"testing"
+	"io/ioutil"
+	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
-	"github.com/bryanl/dolb/mocks"
-	"github.com/digitalocean/godo"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/bryanl/dolb/do"
+	. "github.com/bryanl/dolb/server"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func Test_isValidClusterName(t *testing.T) {
-	cases := []struct {
-		name    string
-		isValid bool
-	}{
-		{name: "my-cluster", isValid: true},
-		{name: "12345", isValid: true},
-		{name: "!", isValid: false},
-		{name: "", isValid: false},
-	}
+var oldUserData string
 
-	for _, c := range cases {
-		got := isValidClusterName(c.name)
-		assert.Equal(t, c.isValid, got)
-	}
-}
+var _ = BeforeSuite(func() {
+	logrus.SetOutput(ioutil.Discard)
+	oldUserData = UserDataTemplate
+	UserDataTemplate = "userdata"
+})
 
-func TestBoostrapConfig_HasSyslog(t *testing.T) {
-	bc := &BootstrapConfig{
-		Region:            "dev0",
-		SSHKeys:           []string{"123456"},
-		DigitalOceanToken: "token",
-	}
+var _ = AfterSuite(func() {
+	logrus.SetOutput(os.Stdout)
+	UserDataTemplate = oldUserData
+})
 
-	assert.False(t, bc.HasSyslog())
+var _ = Describe("LiveClusterOps", func() {
 
-	bc.RemoteSyslog = &RemoteSyslog{
-		Host: "example.com",
-		Port: 515,
-	}
-
-	assert.True(t, bc.HasSyslog())
-}
-
-func TestNewClusterOps(t *testing.T) {
-	co := NewClusterOps()
-	assert.NotNil(t, co)
-}
-
-type withMockGodoClusterOpts func(*clusterOps, *godoMocks)
-type godoMocks struct {
-	Droplets *mocks.DropletsService
-}
-
-type dropletOnboardMock struct{}
-
-func (dom *dropletOnboardMock) Setup() {}
-
-func withMockGodo(fn withMockGodoClusterOpts) {
-	co := &clusterOps{}
-	co.DiscoveryGenerator = func() (string, error) {
-		return "http://example.com/token", nil
-	}
-
-	gc := &godo.Client{}
-	ds := &mocks.DropletsService{}
-	gc.Droplets = ds
-	co.GodoClientFactory = func(string) *godo.Client {
-		return gc
-	}
-
-	co.DropletOnboardFactory = func(godo.Droplet, string, *godo.Client, *Config) DropletOnboard {
-		return &dropletOnboardMock{}
-	}
-
-	gm := &godoMocks{
-		Droplets: ds,
-	}
-
-	fn(co, gm)
-}
-
-func TestBootstrap(t *testing.T) {
-	withMockGodo(func(co *clusterOps, gm *godoMocks) {
-		droplet := godo.Droplet{}
-		gm.Droplets.On("Create", mock.Anything).Return(&droplet, nil, nil)
-
-		bc := &BootstrapConfig{
-			Name:              "test-cluster",
-			Region:            "dev0",
-			SSHKeys:           []string{"123456"},
-			DigitalOceanToken: "token",
+	var (
+		logger     = logrus.WithFields(logrus.Fields{})
+		clusterOps *LiveClusterOps
+		session    = &dao.MockSession{}
+		config     = &Config{
+			DBSession:  session,
+			BaseDomain: "lb.example.com",
 		}
-
-		sessionMock := &dao.MockSession{}
-
-		members := []dao.Agent{
-			{ID: "1", ClusterID: "12345", Name: "lb-test-cluster-1"},
-			{ID: "2", ClusterID: "12345", Name: "lb-test-cluster-2"},
-			{ID: "3", ClusterID: "12345", Name: "lb-test-cluster-3"},
+		mockDigitalOcean = &do.MockDigitalOcean{}
+		bo               = BootstrapOptions{
+			BootstrapConfig: &BootstrapConfig{
+				Name:    "alpha-cluster",
+				Region:  "dev0",
+				SSHKeys: []string{},
+			},
+			LoadBalancer: &dao.LoadBalancer{
+				ID: "alpha-cluster",
+			},
+			Config: config,
 		}
+	)
 
-		for _, m := range members {
-			cmr := &dao.CreateAgentRequest{ClusterID: m.ClusterID, Name: m.Name}
-			sessionMock.On("CreateAgent", cmr).Return(&m, nil).Once()
+	BeforeEach(func() {
+		config.SetLogger(logger)
+
+		clusterOps = &LiveClusterOps{
+			DiscoveryGenerator: func() (string, error) {
+				return "http://example.com/token", nil
+			},
+			DigitalOceanFactory: func(string, string) do.DigitalOcean {
+				return mockDigitalOcean
+			},
 		}
-
-		lb := &dao.LoadBalancer{ID: "12345"}
-
-		config := &Config{
-			ServerURL: "http://example.com",
-			DBSession: sessionMock,
-		}
-
-		bo := &BootstrapOptions{
-			LoadBalancer:    lb,
-			BootstrapConfig: bc,
-			Config:          config,
-		}
-		err := co.Bootstrap(bo)
-		assert.NoError(t, err)
 	})
-}
 
-func TestBootstrap_MissingName(t *testing.T) {
-	withMockGodo(func(co *clusterOps, gm *godoMocks) {
-		bc := &BootstrapConfig{
-			Region:            "dev0",
-			SSHKeys:           []string{"123456"},
-			DigitalOceanToken: "token",
-		}
+	Describe("Bootstrap", func() {
+		Context("with valid cluster name", func() {
 
-		lb := &dao.LoadBalancer{}
+			BeforeEach(func() {
+				for i := 1; i < 4; i++ {
+					car := dao.CreateAgentRequest{
+						ClusterID: "alpha-cluster",
+						Name:      fmt.Sprintf("lb-alpha-cluster-%d", i),
+					}
+					daoAgent := &dao.Agent{
+						ID:        fmt.Sprintf("agent-%d", i),
+						ClusterID: "alpha-cluster",
+						Name:      car.Name,
+					}
+					session.On("CreateAgent", &car).Return(daoAgent, nil).Once()
 
-		config := &Config{
-			ServerURL: "http://example.com",
-		}
+					ip := fmt.Sprintf("4.4.4.%d", i)
 
-		bo := &BootstrapOptions{
-			LoadBalancer:    lb,
-			BootstrapConfig: bc,
-			Config:          config,
-		}
-		err := co.Bootstrap(bo)
-		assert.Error(t, err)
+					dcr := &do.DropletCreateRequest{
+						Name:     car.Name,
+						Region:   "dev0",
+						Size:     "512mb",
+						SSHKeys:  []string{},
+						UserData: "userdata",
+					}
+					doAgent := &do.Agent{
+						IPAddresses: do.IPAddresses{
+							"public": ip,
+						},
+					}
+					mockDigitalOcean.On("CreateAgent", dcr).Return(doAgent, nil).Once()
+
+					dnsName := fmt.Sprintf("%s.%s", car.Name, "dev0")
+					de := &do.DNSEntry{}
+					mockDigitalOcean.On("CreateDNS", dnsName, ip).Return(de, nil).Once()
+
+					ado := &dao.AgentDOConfig{
+						ID: daoAgent.ID,
+					}
+
+					daoAgent = &dao.Agent{
+						ID:        daoAgent.ID,
+						ClusterID: daoAgent.ClusterID,
+						Name:      daoAgent.Name,
+						IPID:      5,
+					}
+					session.On("UpdateAgentDOConfig", ado).Return(daoAgent, nil).Once()
+				}
+			})
+
+			It("successfully bootstraps an agent", func() {
+				err := clusterOps.Bootstrap(&bo)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+		Context("with an invalid cluster name", func() {
+			var (
+				bo = BootstrapOptions{
+					BootstrapConfig: &BootstrapConfig{},
+					LoadBalancer:    &dao.LoadBalancer{},
+					Config:          config,
+				}
+			)
+
+			It("errors", func() {
+				err := clusterOps.Bootstrap(&bo)
+				Expect(err).ToNot(Succeed())
+			})
+		})
+
+		Context("with errors while generating the discovery token", func() {
+
+			BeforeEach(func() {
+				clusterOps.DiscoveryGenerator = func() (string, error) {
+					return "", errors.New("fail")
+				}
+			})
+
+			It("errors", func() {
+				err := clusterOps.Bootstrap(&bo)
+				Expect(err).ToNot(Succeed())
+			})
+		})
 	})
-}
-
-func Test_discoveryGenerator(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "http://example.com/token")
-	}))
-	defer ts.Close()
-
-	defer func(u string) { discoveryGeneratorURI = u }(discoveryGeneratorURI)
-	discoveryGeneratorURI = ts.URL
-
-	uri, err := discoveryGenerator()
-	assert.NoError(t, err)
-
-	assert.Equal(t, "http://example.com/token", uri)
-}
-
-func TestUserData(t *testing.T) {
-	defer func(udt string) { userDataTemplate = udt }(userDataTemplate)
-
-	mT := map[string]string{
-		"token":          "{{.CoreosToken}}",
-		"region":         "{{.BootstrapConfig.Region}}",
-		"do_token":       "{{.BootstrapConfig.DigitalOceanToken}}",
-		"cluster_config": "{{.BootstrapConfig.Name}}",
-		"server_url":     "{{.ServerURL}}",
-		"log.host":       "{{.BootstrapConfig.RemoteSyslog.Host}}",
-		"log.port":       "{{.BootstrapConfig.RemoteSyslog.Port}}",
-	}
-
-	b, err := json.Marshal(&mT)
-	assert.NoError(t, err)
-	userDataTemplate = string(b)
-
-	token := "12345"
-	agentID := "agent-2"
-
-	bc := &BootstrapConfig{
-		Region: "dev0",
-		RemoteSyslog: &RemoteSyslog{
-			EnableSSL: true,
-			Host:      "host",
-			Port:      515,
-		},
-	}
-
-	config := &Config{
-		ServerURL: "http://example.com",
-	}
-
-	lb := &dao.LoadBalancer{ID: "lb-1"}
-	bo := &BootstrapOptions{
-		LoadBalancer:    lb,
-		Config:          config,
-		BootstrapConfig: bc,
-	}
-
-	co := &clusterOps{}
-
-	userData, err := co.userData(token, agentID, bo)
-	assert.NoError(t, err)
-
-	fmt.Println(userData)
-
-	var m map[string]interface{}
-	err = json.Unmarshal([]byte(userData), &m)
-	assert.NoError(t, err)
-	assert.Equal(t, token, m["token"])
-	assert.Equal(t, bc.Region, m["region"])
-	assert.Equal(t, bc.RemoteSyslog.Host, m["log.host"])
-	assert.Equal(t, strconv.Itoa(bc.RemoteSyslog.Port), m["log.port"])
-}
-
-func Test_generateInstanceID(t *testing.T) {
-	id := generateInstanceID()
-	assert.Equal(t, 10, len(id))
-}
+})

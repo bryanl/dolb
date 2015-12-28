@@ -38,8 +38,8 @@ func NewLoadBalancerFromDAO(lb dao.LoadBalancer) LoadBalancer {
 
 // FloatingIP is a floating ip.
 type FloatingIP struct {
-	ID        int    `json:"id"`
-	IPAddress string `json:"ip_address"`
+	ID        int    `json:"id,omitempty"`
+	IPAddress string `json:"ip_address,omitempty"`
 }
 
 // LBListHandler is a handler for listing load balancers.

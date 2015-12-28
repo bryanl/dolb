@@ -6,13 +6,12 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 )
 
 // BootstrapClusterResponse is a bootstrap cluster response.
 type BootstrapClusterResponse struct {
-	LoadBalancer *dao.LoadBalancer
+	LoadBalancer LoadBalancer
 }
 
 // LBCreateHandler is a http handler for creating a load balancer.
@@ -55,7 +54,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	}).Info("created load balancer")
 
 	bcResp := BootstrapClusterResponse{
-		LoadBalancer: lb,
+		LoadBalancer: NewLoadBalancerFromDAO(*lb),
 	}
 
 	return service.Response{Body: bcResp, Status: http.StatusCreated}

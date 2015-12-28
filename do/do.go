@@ -51,7 +51,6 @@ type DigitalOcean interface {
 type DropletCreateRequest struct {
 	Name     string
 	Region   string
-	Image    string
 	Size     string
 	SSHKeys  []string
 	UserData string
@@ -69,6 +68,7 @@ type DNSEntry struct {
 	Domain   string
 	Name     string
 	Type     string
+	IP       string
 }
 
 type FloatingIP struct {
@@ -104,6 +104,7 @@ func (ldo *LiveDigitalOcean) CreateAgent(dcr *DropletCreateRequest) (*Agent, err
 		Image:             godo.DropletCreateImage{Slug: coreosImage},
 		Size:              dcr.Size,
 		PrivateNetworking: true,
+		SSHKeys:           keys,
 		UserData:          dcr.UserData,
 	}
 
@@ -198,6 +199,7 @@ func (ldo *LiveDigitalOcean) CreateDNS(name, ipAddress string) (*DNSEntry, error
 		Domain:   ldo.BaseDomain,
 		Name:     name,
 		Type:     "A",
+		IP:       r.Data,
 	}, nil
 }
 
