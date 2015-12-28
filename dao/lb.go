@@ -70,6 +70,8 @@ type AgentDOConfig struct {
 type Session interface {
 	CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error)
 	CreateAgent(cmr *CreateAgentRequest) (*Agent, error)
+	DeleteLoadBalancer(id string) error
+	DeleteAgent(id string) error
 	ListLoadBalancers() ([]LoadBalancer, error)
 	RetrieveAgent(id string) (*Agent, error)
 	RetrieveLoadBalancer(id string) (*LoadBalancer, error)
@@ -168,6 +170,70 @@ func (ps *PgSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
 		Name:      cmr.Name,
 		ClusterID: cmr.ClusterID,
 	}, nil
+}
+
+func (ps *PgSession) DeleteLoadBalancer(id string) error {
+	tx, err := ps.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
+
+	q := `DELETE FROM load_balancers where id = $1`
+	_, err = tx.Exec(q, id)
+	if err != nil {
+		return err
+	}
+
+	q = `SELECT id FROM agents where cluster_id = $1`
+	rows, err := tx.Query(q, id)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var agentID string
+		err = rows.Scan(&agentID)
+		if err != nil {
+			return err
+		}
+
+		err = ps.DeleteAgent(agentID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (ps *PgSession) DeleteAgent(id string) error {
+	tx, err := ps.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
+
+	q := `DELETE FROM agents where id = $1`
+	_, err = tx.Exec(q, id)
+
+	return err
 }
 
 // ListLoadBalancers lists all load balancers.

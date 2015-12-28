@@ -12,11 +12,11 @@ import (
 
 // Config is configuration for the load balancer service.
 type Config struct {
-	BaseDomain        string
-	ClusterOpsFactory func() ClusterOps
-	DBSession         dao.Session
-	ServerURL         string
-	GodoClientFactory do.GodoClientFactoryFn
+	BaseDomain          string
+	ClusterOpsFactory   func() ClusterOps
+	DBSession           dao.Session
+	ServerURL           string
+	DigitalOceanFactory func(token string, config *Config) do.DigitalOcean
 
 	logger *logrus.Entry
 }
@@ -28,13 +28,20 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 		ClusterOpsFactory: NewClusterOps,
 		DBSession:         sess,
 		ServerURL:         su,
-		GodoClientFactory: do.GodoClientFactory,
+		DigitalOceanFactory: func(token string, config *Config) do.DigitalOcean {
+			client := do.GodoClientFactory(token)
+			return do.NewLiveDigitalOcean(client, config.BaseDomain)
+		},
 	}
 }
 
 // SetLogger sets a logger for config.
 func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
+}
+
+func (c *Config) DigitalOcean(token string) do.DigitalOcean {
+	return c.DigitalOceanFactory(token, c)
 }
 
 // API is a the load balancer API.
@@ -55,6 +62,7 @@ func New(config *Config) (*API, error) {
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBListHandler}).Methods("GET")
 	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
 	a.Mux.Handle("/lb/{lb_id}", service.Handler{Config: config, F: LBRetrieveHandler}).Methods("GET")
+	a.Mux.Handle("/lb/{lb_id}", service.Handler{Config: config, F: LBDeleteHandler}).Methods("DELETE")
 	a.Mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 
 	return a, nil

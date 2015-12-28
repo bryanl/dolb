@@ -31,15 +31,18 @@ var _ = AfterSuite(func() {
 var _ = Describe("LiveClusterOps", func() {
 
 	var (
-		logger     = logrus.WithFields(logrus.Fields{})
-		clusterOps *LiveClusterOps
-		session    = &dao.MockSession{}
-		config     = &Config{
+		logger           = logrus.WithFields(logrus.Fields{})
+		clusterOps       *LiveClusterOps
+		session          = &dao.MockSession{}
+		mockDigitalOcean = &do.MockDigitalOcean{}
+		config           = &Config{
 			DBSession:  session,
 			BaseDomain: "lb.example.com",
+			DigitalOceanFactory: func(string, *Config) do.DigitalOcean {
+				return mockDigitalOcean
+			},
 		}
-		mockDigitalOcean = &do.MockDigitalOcean{}
-		bo               = BootstrapOptions{
+		bo = BootstrapOptions{
 			BootstrapConfig: &BootstrapConfig{
 				Name:    "alpha-cluster",
 				Region:  "dev0",
@@ -58,9 +61,6 @@ var _ = Describe("LiveClusterOps", func() {
 		clusterOps = &LiveClusterOps{
 			DiscoveryGenerator: func() (string, error) {
 				return "http://example.com/token", nil
-			},
-			DigitalOceanFactory: func(string, string) do.DigitalOcean {
-				return mockDigitalOcean
 			},
 		}
 	})

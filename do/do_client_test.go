@@ -33,7 +33,8 @@ var _ = Describe("DoClient", func() {
 			Domains:  domainsService,
 			Droplets: dropletsService,
 		}
-		ldo = NewLiveDigitalOcean(godoc, "lb.example.com")
+		domain = "lb.example.com"
+		ldo    = NewLiveDigitalOcean(godoc, domain)
 	)
 
 	Describe("creating an agent", func() {
@@ -81,6 +82,20 @@ var _ = Describe("DoClient", func() {
 	})
 
 	Describe("deleting an agent", func() {
+		Context("that exists", func() {
+			BeforeEach(func() {
+				dropletsService.On("Delete", 1).Return(nil, nil).Once()
+			})
+
+			AfterEach(func() {
+				dropletsService.AssertExpectations(GinkgoT())
+			})
+
+			It("deletes the agent", func() {
+				err := ldo.DeleteAgent(1)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("creating a dns entry", func() {
@@ -101,7 +116,7 @@ var _ = Describe("DoClient", func() {
 
 			domainsService.On(
 				"CreateRecord",
-				"lb.example.com",
+				domain,
 				expectedDrer,
 			).Return(record, nil, nil).Once()
 
@@ -115,6 +130,20 @@ var _ = Describe("DoClient", func() {
 		})
 	})
 	Describe("deleting a dns entry", func() {
+		Context("that exists", func() {
+			BeforeEach(func() {
+				domainsService.On("DeleteRecord", domain, 1).Return(nil, nil)
+			})
+
+			AfterEach(func() {
+				domainsService.AssertExpectations(GinkgoT())
+			})
+
+			It("deletes the agent", func() {
+				err := ldo.DeleteDNS(1)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
 	})
 	Describe("creating a floating ip", func() {
 	})

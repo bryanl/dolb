@@ -69,10 +69,9 @@ type ClusterOps interface {
 	Bootstrap(bo *BootstrapOptions) error
 }
 
-// clusterOps are operations for building clusters.
+// LiveClusterOps are operations for building clusters.
 type LiveClusterOps struct {
-	DiscoveryGenerator  func() (string, error)
-	DigitalOceanFactory func(token, baseDomain string) do.DigitalOcean
+	DiscoveryGenerator func() (string, error)
 }
 
 var _ ClusterOps = &LiveClusterOps{}
@@ -81,10 +80,6 @@ var _ ClusterOps = &LiveClusterOps{}
 func NewClusterOps() ClusterOps {
 	return &LiveClusterOps{
 		DiscoveryGenerator: discoveryGenerator,
-		DigitalOceanFactory: func(token, baseDomain string) do.DigitalOcean {
-			client := do.GodoClientFactory(token)
-			return do.NewLiveDigitalOcean(client, baseDomain)
-		},
 	}
 }
 
@@ -119,7 +114,7 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 
 		go func(bo *BootstrapOptions) {
 			bc := bo.BootstrapConfig
-			doc := co.DigitalOceanFactory(bc.DigitalOceanToken, bo.Config.BaseDomain)
+			doc := bo.Config.DigitalOcean(bc.DigitalOceanToken)
 			dcr := do.DropletCreateRequest{
 				Name:     name,
 				Region:   bc.Region,
