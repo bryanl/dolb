@@ -178,7 +178,8 @@ func (ldo *LiveDigitalOcean) waitForAction(action *godo.Action) error {
 }
 
 func (ldo *LiveDigitalOcean) DeleteAgent(id int) error {
-	return nil
+	_, err := ldo.Client.Droplets.Delete(id)
+	return err
 }
 
 func (ldo *LiveDigitalOcean) CreateDNS(name, ipAddress string) (*DNSEntry, error) {
@@ -204,7 +205,8 @@ func (ldo *LiveDigitalOcean) CreateDNS(name, ipAddress string) (*DNSEntry, error
 }
 
 func (ldo *LiveDigitalOcean) DeleteDNS(id int) error {
-	return nil
+	_, err := ldo.Client.Domains.DeleteRecord(ldo.BaseDomain, id)
+	return err
 }
 
 func (ldo *LiveDigitalOcean) CreateFloatingIP(region string) (*FloatingIP, error) {

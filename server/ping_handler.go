@@ -9,7 +9,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
-	"github.com/digitalocean/godo"
 )
 
 // PingRequest is a ping call from an agent.
@@ -63,20 +62,14 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	if rr.IsLeader && lb.FloatingIP == "" {
-		drer := &godo.DomainRecordEditRequest{
-			Type: "A",
-			Name: fmt.Sprintf("c-%s", lb.Name),
-			Data: rr.FloatingIP,
-		}
-
-		godoc := config.GodoClientFactory(lb.DigitalOceanToken)
-		r, _, err := godoc.Domains.CreateRecord(config.BaseDomain, drer)
+		godoc := config.DigitalOcean(lb.DigitalOceanToken)
+		de, err := godoc.CreateDNS(fmt.Sprintf("c-%s", lb.Name), rr.FloatingIP)
 		if err != nil {
 			config.logger.WithError(err).Error("could not create floating ip dns entry")
 			return service.Response{Body: err, Status: 500}
 		}
 
-		lb.FloatingIPID = r.ID
+		lb.FloatingIPID = de.RecordID
 
 		err = config.DBSession.UpdateLoadBalancer(lb)
 		if err != nil {

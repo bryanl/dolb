@@ -3,11 +3,14 @@ package server_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/do"
 	. "github.com/bryanl/dolb/server"
 	"github.com/stretchr/testify/mock"
 
@@ -16,10 +19,10 @@ import (
 )
 
 var _ = Describe("Api", func() {
-
 	var (
 		api    *API
 		sess   = &dao.MockSession{}
+		doMock = &do.MockDigitalOcean{}
 		config = NewConfig("lb.example.com", "http://example.com", sess)
 		err    error
 		ts     *httptest.Server
@@ -27,6 +30,10 @@ var _ = Describe("Api", func() {
 	)
 
 	BeforeEach(func() {
+		config.DigitalOceanFactory = func(string, *Config) do.DigitalOcean {
+			return doMock
+		}
+		config.SetLogger(logrus.WithFields(logrus.Fields{}))
 		api, err = New(config)
 		Expect(err).NotTo(HaveOccurred())
 		ts = httptest.NewServer(api.Mux)
@@ -111,6 +118,36 @@ var _ = Describe("Api", func() {
 				defer res.Body.Close()
 
 				Expect(res.StatusCode).To(Equal(404))
+			})
+		})
+	})
+
+	Describe("deleting a load balancer", func() {
+		Context("that exists", func() {
+
+			var (
+				res *http.Response
+			)
+
+			BeforeEach(func() {
+				lb := &dao.LoadBalancer{FloatingIPID: 1}
+				sess.On("RetrieveLoadBalancer", "12345").Return(lb, nil)
+				sess.On("DeleteLoadBalancer", "12345").Return(nil)
+				doMock.On("DeleteDNS", lb.FloatingIPID).Return(nil)
+
+				u.Path = "/lb/12345"
+				req, err := http.NewRequest("DELETE", u.String(), nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				client := &http.Client{}
+				res, err = client.Do(req)
+				fmt.Println(err)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns a 204", func() {
+				Expect(res).ToNot(BeNil())
+				Expect(res.StatusCode).To(Equal(204))
 			})
 		})
 	})
