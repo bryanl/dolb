@@ -80,7 +80,7 @@ type Session interface {
 
 type sqlOpenerFn func(string) (*sqlx.DB, error)
 
-var sqlOpener = func(dsn string) (*sqlx.DB, error) {
+var SQLOpener = func(dsn string) (*sqlx.DB, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ var sqlOpener = func(dsn string) (*sqlx.DB, error) {
 
 // NewSession builds an instance of PgSession.
 func NewSession(dbURL string) (Session, error) {
-	db, err := sqlOpener(dbURL)
+	db, err := SQLOpener(dbURL)
 	if err != nil {
 		return nil, err
 	}
