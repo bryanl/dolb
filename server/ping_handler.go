@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 )
 
@@ -19,17 +18,6 @@ type PingRequest struct {
 	FloatingIP  string `json:"floating_ip"`
 	Host        string `json:"host"`
 	IsLeader    bool   `json:"is_leader"`
-}
-
-// ToUpdateAgentRequest converts a PingRequest to a dao.UpdateAgentRequest.
-func (pr *PingRequest) ToUpdateAgentRequest() *dao.UpdateAgentRequest {
-	return &dao.UpdateAgentRequest{
-		ID:         pr.AgentID,
-		ClusterID:  pr.ClusterID,
-		FloatingIP: pr.FloatingIP,
-		IsLeader:   pr.IsLeader,
-		Name:       pr.Host,
-	}
 }
 
 // PongResponse is a response to an agent ping request.
@@ -55,31 +43,40 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
 	}
 
-	lb, err := config.DBSession.RetrieveLoadBalancer(rr.ClusterID)
+	lb, err := config.DBSession.LoadLoadBalancer(rr.ClusterID)
 	if err != nil {
 		config.logger.WithError(err).Error("could not retrieve load balancer")
 		return service.Response{Body: err, Status: 500}
 	}
 
-	if rr.IsLeader && lb.FloatingIP == "" {
-		godoc := config.DigitalOcean(lb.DigitalOceanToken)
+	if rr.IsLeader && lb.FloatingIp == "" {
+		godoc := config.DigitalOcean(lb.DigitaloceanAccessToken)
 		de, err := godoc.CreateDNS(fmt.Sprintf("c-%s", lb.Name), rr.FloatingIP)
 		if err != nil {
 			config.logger.WithError(err).Error("could not create floating ip dns entry")
 			return service.Response{Body: err, Status: 500}
 		}
 
-		lb.FloatingIPID = de.RecordID
+		lb.FloatingIp = de.IP
+		lb.FloatingIpID = de.RecordID
+		lb.Leader = rr.AgentID
 
-		err = config.DBSession.UpdateLoadBalancer(lb)
+		err = lb.Save()
 		if err != nil {
 			config.logger.WithError(err).Error("could not update load balancer")
 			return service.Response{Body: err, Status: 500}
 		}
 	}
 
-	umr := rr.ToUpdateAgentRequest()
-	err = config.DBSession.UpdateAgent(umr)
+	agent, err := config.DBSession.LoadAgent(rr.AgentID)
+	if err != nil {
+		config.logger.WithError(err).Error("could not load agent")
+		return service.Response{Body: err, Status: 500}
+	}
+
+	agent.LastSeenAt = time.Now()
+	err = agent.Save()
+
 	if err != nil {
 		config.logger.WithError(err).Error("could not update member")
 		return service.Response{Body: err, Status: 500}

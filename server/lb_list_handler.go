@@ -27,11 +27,11 @@ func NewLoadBalancerFromDAO(lb dao.LoadBalancer) LoadBalancer {
 	return LoadBalancer{
 		ID:     lb.ID,
 		Name:   lb.Name,
-		Leader: lb.LeaderString(),
+		Leader: lb.Leader,
 		Region: lb.Region,
 		FloatingIP: FloatingIP{
-			ID:        lb.FloatingIPID,
-			IPAddress: lb.FloatingIP,
+			ID:        lb.FloatingIpID,
+			IPAddress: lb.FloatingIp,
 		},
 	}
 }
@@ -46,15 +46,15 @@ type FloatingIP struct {
 func LBListHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 
-	dbLBS, err := config.DBSession.ListLoadBalancers()
+	lbs, err := config.DBSession.LoadLoadBalancers()
 	if err != nil {
 		logrus.WithError(err).Error("could not retrieve load balancers")
 		return service.Response{Body: err, Status: 500}
 	}
 
 	lbr := LoadBalancersResponse{}
-	lbr.LoadBalancers = make([]LoadBalancer, len(dbLBS))
-	for i, lb := range dbLBS {
+	lbr.LoadBalancers = make([]LoadBalancer, len(lbs))
+	for i, lb := range lbs {
 		lbr.LoadBalancers[i] = NewLoadBalancerFromDAO(lb)
 	}
 

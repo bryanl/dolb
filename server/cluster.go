@@ -97,12 +97,10 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("lb-%s-%d", bo.LoadBalancer.ID, i+1)
 
-		cmr := &dao.CreateAgentRequest{
-			ClusterID: bo.LoadBalancer.ID,
-			Name:      name,
-		}
-
-		a, err := bo.Config.DBSession.CreateAgent(cmr)
+		a := bo.Config.DBSession.NewAgent()
+		a.ClusterID = bo.LoadBalancer.ID
+		a.Name = name
+		err = a.Save()
 		if err != nil {
 			return err
 		}
@@ -135,22 +133,19 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 				return
 			}
 
-			adc := &dao.AgentDOConfig{
-				ID:        a.ID,
-				DropletID: agent.DropletID,
-				IPID:      de.RecordID,
-			}
+			a.DropletID = agent.DropletID
+			a.IpID = de.RecordID
+			err = a.Save()
 
-			daoAgent, err := bo.Config.DBSession.UpdateAgentDOConfig(adc)
 			if err != nil {
 				logrus.WithError(err).Error("unable to save agent in db")
 				return
 			}
 
 			bo.Config.logger.WithFields(logrus.Fields{
-				"agent-id":   daoAgent.ID,
-				"cluster-id": daoAgent.ClusterID,
-				"ip-id":      daoAgent.IPID,
+				"agent-id":   a.ID,
+				"cluster-id": a.ClusterID,
+				"ip-id":      a.IpID,
 			}).Info("agent configured")
 		}(bo)
 	}

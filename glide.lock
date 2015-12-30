@@ -1,5 +1,5 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-26T22:57:37.953265803-05:00
+updated: 2015-12-29T11:53:48.92992752-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -26,7 +26,7 @@ imports:
 - name: github.com/codegangsta/negroni
   version: c7477ad8e330bef55bf1ebe300cf8aa67c492d1b
 - name: github.com/coreos/etcd
-  version: 729b530c489a73532843e664ae9c6db5c686d314
+  version: f1761798e9a25a5ce466305862c68ad0ceb877ae
 - name: github.com/coreos/go-etcd
   version: 003851be7bb0694fe3cc457a49529a19388ee7cf
 - name: github.com/coreos/go-semver
@@ -74,7 +74,7 @@ imports:
 - name: github.com/gorilla/context
   version: 1c83b3eabd45b6d76072b66b746c20815fb2872d
 - name: github.com/gorilla/mux
-  version: 9c068cf16d982f8bd444b8c352acbeec34c4fe5b
+  version: 2aad27d3101b8183f8fa1bebdbc2cdb74fcef090
 - name: github.com/hailocab/go-hostpool
   version: 50839ee41f32bfca8d03a183031aa634b2dc1c64
 - name: github.com/hashicorp/hcl
@@ -97,10 +97,18 @@ imports:
   version: f7ee69f31298ecbe5d2b349c711e2547a617d398
 - name: github.com/kr/text
   version: bb797dc4fb8320488f47bf11de07a733d7233e1f
+- name: github.com/lann/builder
+  version: f22ce00fd9394014049dad11c244859432bd6820
+- name: github.com/lann/ps
+  version: 62de8c46ede02a7675c4c79c84883eb164cb71e3
 - name: github.com/lib/pq
   version: 11fc39a580a008f1f39bb3d11d984fb34ed778d9
 - name: github.com/magiconair/properties
   version: c81f9d71af8f8cba1466501d30326b99a4e56c19
+- name: github.com/Masterminds/squirrel
+  version: 1f8a6e983e7a153765cf26564d87cfb966da67c2
+- name: github.com/Masterminds/structable
+  version: 37cf1c703d73e8175cf9cee44bbb2fc9d7b0e4e8
 - name: github.com/mattes/migrate
   version: 602888252929b4290c98a89956877e4f9bb033cc
 - name: github.com/mattn/go-colorable
@@ -196,7 +204,7 @@ imports:
 - name: golang.org/x/text
   version: cf4986612c83df6c55578ba198316d1684a9a287
 - name: golang.org/x/tools
-  version: d6e83e534da905609e21e4086a0fbaed33f88d07
+  version: 157f8abbbd7c19e90432c72cb6216cf0b9324c55
 - name: google.golang.org/api
   version: dc6d2353af16e2a2b0ff6986af051d473a4ed468
 - name: google.golang.org/appengine
@@ -218,6 +226,8 @@ imports:
   version: 31e6fd4bd5a98d8ee7673d24bc54ec73c31810dd
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/Masterminds/squirrel.v1
+  version: 1f8a6e983e7a153765cf26564d87cfb966da67c2
 - name: gopkg.in/yaml.v1
   version: 9f9df34309c04878acc86042b16630b0f696e1de
 - name: gopkg.in/yaml.v2

@@ -29,7 +29,11 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: "digitalocean_token is required", Status: 400}
 	}
 
-	lb, err := config.DBSession.CreateLoadBalancer(bc.Name, bc.Region, bc.DigitalOceanToken, config.logger)
+	lb := config.DBSession.NewLoadBalancer()
+	lb.Name = bc.Name
+	lb.Region = bc.Region
+	lb.DigitaloceanAccessToken = bc.DigitalOceanToken
+	err = lb.Save()
 	if err != nil {
 		config.logger.WithError(err).Error("could not save load balancer")
 		return service.Response{Body: err, Status: 400}

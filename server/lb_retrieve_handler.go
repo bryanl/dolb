@@ -14,7 +14,7 @@ func LBRetrieveHandler(c interface{}, r *http.Request) service.Response {
 
 	vars := mux.Vars(r)
 	lbID := vars["lb_id"]
-	daolb, err := config.DBSession.RetrieveLoadBalancer(lbID)
+	daolb, err := config.DBSession.LoadLoadBalancer(lbID)
 	if err != nil {
 		logrus.WithError(err).Error("could not retrieve load balancer")
 		return service.Response{Body: err, Status: 404}

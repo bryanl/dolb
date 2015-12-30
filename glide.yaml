@@ -18,3 +18,5 @@ import:
 - package: gopkg.in/DATA-DOG/go-sqlmock.v1
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
+- package: gopkg.in/Masterminds/squirrel.v1
+- package: github.com/Masterminds/structable

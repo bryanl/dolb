@@ -2,386 +2,157 @@ package dao
 
 import (
 	"database/sql"
-	"fmt"
-	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/Sirupsen/logrus"
-	"github.com/jmoiron/sqlx"
 	"github.com/satori/go.uuid"
 
 	_ "github.com/lib/pq" // we are using postgresql
 )
 
-// LoadBalancer is a load balancer.
-type LoadBalancer struct {
-	ID                string         `db:"id"`
-	Name              string         `db:"name"`
-	Region            string         `db:"region"`
-	Leader            sql.NullString `db:"leader"`
-	FloatingIP        string         `db:"floating_ip"`
-	FloatingIPID      int            `db:"floating_ip_id"`
-	DigitalOceanToken string         `db:"digitalocean_access_token"`
-	Members           []Agent
-}
-
-// LeaderString returns leader as a string.
-func (lb *LoadBalancer) LeaderString() string {
-	if lb.Leader.Valid {
-		return lb.Leader.String
-	}
-
-	return ""
-}
-
-// Agent is a load balancer agent.
-type Agent struct {
-	ID         string    `db:"id"`
-	ClusterID  string    `db:"cluster_id"`
-	DropletID  int       `db:"droplet_id"`
-	Name       string    `db:"name"`
-	IPID       int       `db:"ip_id"`
-	LastSeenAt time.Time `db:"last_seen_at"`
-}
-
-// CreateAgentRequest is a request for creating an agent.
-type CreateAgentRequest struct {
-	ClusterID string
-	Name      string
-}
-
-// UpdateAgentRequest is a request for updating an agent.
-type UpdateAgentRequest struct {
-	ID         string
-	ClusterID  string
-	FloatingIP string
-	IsLeader   bool
-	Leader     string
-	Name       string
-}
-
-// AgentDOConfig is a digitalocean configuration for an agent.
-type AgentDOConfig struct {
-	ID        string
-	DropletID int
-	IPID      int
-}
-
 // Session is an interface for persisting load balancer and agent data.
 type Session interface {
-	CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error)
-	CreateAgent(cmr *CreateAgentRequest) (*Agent, error)
-	DeleteLoadBalancer(id string) error
-	DeleteAgent(id string) error
-	ListLoadBalancers() ([]LoadBalancer, error)
-	RetrieveAgent(id string) (*Agent, error)
-	RetrieveLoadBalancer(id string) (*LoadBalancer, error)
-	UpdateAgent(umr *UpdateAgentRequest) error
-	UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, error)
-	UpdateLoadBalancer(*LoadBalancer) error
+	LoadAgent(id string) (*Agent, error)
+	LoadLoadBalancer(id string) (*LoadBalancer, error)
+	LoadLoadBalancers() ([]LoadBalancer, error)
+	LoadBalancerAgents(id string) ([]Agent, error)
+	NewAgent() *Agent
+	NewLoadBalancer() *LoadBalancer
 }
 
-type sqlOpenerFn func(string) (*sqlx.DB, error)
-
-var SQLOpener = func(dsn string) (*sqlx.DB, error) {
+// NewSession builds an instance of PgSession.
+func NewSession(dsn string, options ...func(*PgSession)) (Session, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
-	return sqlx.NewDb(db, "postgres"), nil
-}
 
-// NewSession builds an instance of PgSession.
-func NewSession(dbURL string) (Session, error) {
-	db, err := SQLOpener(dbURL)
-	if err != nil {
-		return nil, err
+	cache := squirrel.NewStmtCacheProxy(db)
+
+	ps := &PgSession{
+		db: cache,
+		ModelConfig: &ModelConfig{
+			IDGenerator: func() string {
+				return uuid.NewV4().String()
+			},
+		},
 	}
 
-	return &PgSession{
-		db:    db,
-		idGen: idGen,
-	}, nil
+	for _, option := range options {
+		option(ps)
+	}
+
+	return ps, nil
 }
 
 // PgSession is a session backed by postgresql.
 type PgSession struct {
-	db *sqlx.DB
+	db squirrel.DBProxyBeginner
 
-	idGen func() string
+	ModelConfig *ModelConfig
 }
 
 var _ Session = &PgSession{}
 
-// CreateLoadBalancer creates a load balancer.
-func (ps *PgSession) CreateLoadBalancer(name, region, dotoken string, logger *logrus.Entry) (*LoadBalancer, error) {
-	tx, err := ps.db.Begin()
+func (ps *PgSession) LoadAgent(id string) (*Agent, error) {
+	a := ps.NewAgent()
+	a.ID = id
+	err := a.Load()
 	if err != nil {
+		logrus.WithError(err).Error("can't load agent")
 		return nil, err
 	}
-
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	id := ps.idGen()
-	q := "INSERT INTO load_balancers (id, name, region, digitalocean_access_token) VALUES ($1, $2, $3, $4)"
-	_, err = tx.Exec(q, id, name, region, dotoken)
-	if err != nil {
-		return nil, err
-	}
-
-	return &LoadBalancer{
-		ID:     id,
-		Name:   name,
-		Region: region,
-	}, nil
+	return a, nil
 }
 
-// CreateAgent creates an agent.
-func (ps *PgSession) CreateAgent(cmr *CreateAgentRequest) (*Agent, error) {
-	tx, err := ps.db.Begin()
+func (ps *PgSession) LoadBalancerAgents(id string) ([]Agent, error) {
+	q := squirrel.Select("id").From("agents").Where("cluster_id = $1", id)
+	str, _, _ := q.ToSql()
+	logrus.WithField("sql", str).Info("lb agents")
+	rows, err := q.RunWith(ps.db).Query()
 	if err != nil {
+		logrus.WithError(err).Error("unable to query agents")
 		return nil, err
 	}
 
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	id := ps.idGen()
-
-	_, err = tx.Exec(`INSERT INTO agents (id, cluster_id, name, last_seen_at) VALUES ($1, $2, $3, NOW())`, id, cmr.ClusterID, cmr.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Agent{
-		ID:        id,
-		Name:      cmr.Name,
-		ClusterID: cmr.ClusterID,
-	}, nil
-}
-
-func (ps *PgSession) DeleteLoadBalancer(id string) error {
-	tx, err := ps.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	q := `DELETE FROM load_balancers where id = $1`
-	_, err = tx.Exec(q, id)
-	if err != nil {
-		return err
-	}
-
-	q = `SELECT id FROM agents where cluster_id = $1`
-	rows, err := tx.Query(q, id)
-	if err != nil {
-		return err
-	}
-
+	agents := []Agent{}
 	for rows.Next() {
-		var agentID string
-		err = rows.Scan(&agentID)
+		var id string
+		err = rows.Scan(&id)
 		if err != nil {
-			return err
+			logrus.WithError(err).Error("can't scan agent")
+			return nil, err
 		}
 
-		err = ps.DeleteAgent(agentID)
+		agent, err := ps.LoadAgent(id)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		agents = append(agents, *agent)
 	}
 
-	return nil
+	_ = rows.Close()
+
+	return agents, nil
 }
 
-func (ps *PgSession) DeleteAgent(id string) error {
-	tx, err := ps.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	q := `DELETE FROM agents where id = $1`
-	_, err = tx.Exec(q, id)
-
-	return err
-}
-
-// ListLoadBalancers lists all load balancers.
-func (ps *PgSession) ListLoadBalancers() ([]LoadBalancer, error) {
-	var lbs = []LoadBalancer{}
-	err := ps.db.Select(&lbs, `SELECT id, name, region, leader, floating_ip, floating_ip_id, digitalocean_access_token
-	FROM load_balancers`)
+func (ps *PgSession) LoadLoadBalancer(id string) (*LoadBalancer, error) {
+	lb := ps.NewLoadBalancer()
+	lb.ID = id
+	err := lb.Load()
 	if err != nil {
 		return nil, err
 	}
+	return lb, nil
+}
+
+func (ps *PgSession) LoadLoadBalancers() ([]LoadBalancer, error) {
+	q := lbSelect.From("load_balancers").Where("is_deleted = $1", "false")
+	rows, err := q.RunWith(ps.db).Query()
+	if err != nil {
+		logrus.WithError(err).Error("can't build load balancer query")
+		return nil, err
+	}
+
+	var lbs []LoadBalancer
+	for rows.Next() {
+		var id, name, region, floatingIp, token string
+		var leader sql.NullString
+		var floatingIpID int
+		var isDeleted bool
+
+		err = rows.Scan(&id, &name, &region, &leader, &floatingIp, &floatingIpID,
+			&token, &isDeleted)
+		if err != nil {
+			logrus.WithError(err).Error("can't scan load balancer")
+			return nil, err
+		}
+
+		lb := ps.NewLoadBalancer()
+		lb.ID = id
+		lb.Name = name
+		lb.Region = region
+		lb.FloatingIp = floatingIp
+		lb.FloatingIpID = floatingIpID
+		lb.DigitaloceanAccessToken = token
+		lb.IsDeleted = isDeleted
+
+		if leader.Valid {
+			lb.Leader = leader.String
+		}
+
+		lbs = append(lbs, *lb)
+	}
+
+	_ = rows.Close
 
 	return lbs, nil
 }
 
-// RetrieveAgent retrieves an agent by id.
-func (ps *PgSession) RetrieveAgent(id string) (*Agent, error) {
-	a := &Agent{}
-	if err := ps.db.Get(a, "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE id = $1", id); err != nil {
-		logrus.WithError(err).Error("retrieve-agent")
-		return nil, err
-	}
-
-	return a, nil
+func (ps *PgSession) NewAgent() *Agent {
+	return NewAgent(ps.db, ps.ModelConfig)
 }
 
-// RetrieveLoadBalancer retrieves a load balancer by id.
-func (ps *PgSession) RetrieveLoadBalancer(id string) (*LoadBalancer, error) {
-	lb := &LoadBalancer{}
-	q := "SELECT id, name, region, leader, floating_ip, floating_ip_id, digitalocean_access_token FROM load_balancers WHERE id = $1"
-	if err := ps.db.Get(lb, q, id); err != nil {
-		logrus.WithError(err).Error("retrieve-load-balancer lb")
-		return nil, err
-	}
-
-	lb.Members = []Agent{}
-	q = "SELECT id, cluster_id, droplet_id, name, ip_id, last_seen_at FROM agents WHERE cluster_id = $1"
-	if err := ps.db.Select(&lb.Members, q, id); err != nil {
-		logrus.WithError(err).Error("retrieve-load-balancer agents")
-		return nil, err
-	}
-
-	return lb, nil
-}
-
-// UpdateAgent updates an agent.
-func (ps *PgSession) UpdateAgent(umr *UpdateAgentRequest) error {
-	tx, err := ps.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.Exec(`
-	UPDATE agents
-	SET last_seen_at = NOW()
-	WHERE id = $1`, umr.ID)
-
-	if err != nil {
-		return err
-	}
-
-	if umr.IsLeader {
-		logrus.WithFields(logrus.Fields{
-			"leader":     umr.ID,
-			"cluster-id": umr.ClusterID,
-		}).Info("updating cluster leader")
-		_, err = tx.Exec(`
-		UPDATE load_balancers
-		SET leader = $1,
-		floating_ip = $2
-		WHERE id = $3`, umr.ID, umr.FloatingIP, umr.ClusterID)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// UpdateAgentDOConfig updates an Agent's DigitalOcean config.
-func (ps *PgSession) UpdateAgentDOConfig(doOptions *AgentDOConfig) (*Agent, error) {
-	tx, err := ps.db.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.Exec(`
-	UPDATE agents
-	SET ip_id = $1,
-	droplet_id = $2 
-	WHERE id = $3`, doOptions.IPID, doOptions.DropletID, doOptions.ID)
-
-	if err != nil {
-		logrus.WithError(err).Error("update-do-config")
-		return nil, fmt.Errorf("cannot update agent: %v", err)
-	}
-
-	return ps.RetrieveAgent(doOptions.ID)
-}
-
-// UpdateLoadBalancer updates a load balancer.
-func (ps *PgSession) UpdateLoadBalancer(lb *LoadBalancer) error {
-	tx, err := ps.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.Exec(`
-	UPDATE load_balancers
-	SET floating_ip = $1,
-	floating_ip_id = $2 
-	WHERE id = $3`, lb.FloatingIP, lb.FloatingIPID, lb.ID)
-
-	if err != nil {
-		logrus.WithError(err).Error("update-floating-ip")
-		return fmt.Errorf("cannot update floating ip: %v", err)
-	}
-
-	return nil
-}
-
-func idGen() string {
-	return uuid.NewV4().String()
+func (ps *PgSession) NewLoadBalancer() *LoadBalancer {
+	return NewLoadBalancer(ps.db, ps.ModelConfig)
 }
