@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
@@ -38,6 +39,13 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 // SetLogger sets a logger for config.
 func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
+}
+
+func (c *Config) IDGen() string {
+	s, _ := dao.DefaultSnowflake()
+	ui, _ := s.Next()
+
+	return strconv.FormatUint(ui, 16)
 }
 
 func (c *Config) DigitalOcean(token string) do.DigitalOcean {

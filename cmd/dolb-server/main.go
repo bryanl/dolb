@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -24,6 +25,8 @@ var (
 
 func main() {
 	envflag.Parse()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	if *serverURL == "" {
 		log.Fatal("SERVER_URL environment variable is required")

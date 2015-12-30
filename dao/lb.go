@@ -2,10 +2,10 @@ package dao
 
 import (
 	"database/sql"
+	"strconv"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/Sirupsen/logrus"
-	"github.com/satori/go.uuid"
 
 	_ "github.com/lib/pq" // we are using postgresql
 )
@@ -33,7 +33,12 @@ func NewSession(dsn string, options ...func(*PgSession)) (Session, error) {
 		db: cache,
 		ModelConfig: &ModelConfig{
 			IDGenerator: func() string {
-				return uuid.NewV4().String()
+
+				// NOTE experimenting with twitter's old snowflake id generator
+				s, _ := DefaultSnowflake()
+				ui, _ := s.Next()
+
+				return strconv.FormatUint(ui, 16)
 			},
 		},
 	}

@@ -1,11 +1,13 @@
 package agent
 
 import (
+	"strconv"
 	"sync"
 
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -32,6 +34,13 @@ type Config struct {
 // SetLogger sets the logger for Config.
 func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
+}
+
+func (c *Config) IDGen() string {
+	s, _ := dao.DefaultSnowflake()
+	ui, _ := s.Next()
+
+	return strconv.FormatUint(ui, 16)
 }
 
 // API is the http api for the agent.

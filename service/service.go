@@ -6,7 +6,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/satori/go.uuid"
 )
 
 var (
@@ -40,13 +39,14 @@ type Handler struct {
 
 type HandlerConfig interface {
 	SetLogger(*log.Entry)
+	IDGen() string
 }
 
 // ServeHTTP services a http request. It calls the appropriate handler,
 // logs the request, and encodes the response.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
-	u := uuid.NewV4()
+	u := h.Config.IDGen()
 
 	logger := log.WithFields(log.Fields{
 		"request-id": u,
