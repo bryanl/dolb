@@ -17,6 +17,7 @@ type LoadBalancersResponse struct {
 type LoadBalancer struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
+	State      string     `json:"state"`
 	Leader     string     `json:"leader"`
 	Region     string     `json:"region"`
 	FloatingIP FloatingIP `json:"floating_ip"`
@@ -27,6 +28,7 @@ func NewLoadBalancerFromDAO(lb dao.LoadBalancer) LoadBalancer {
 	return LoadBalancer{
 		ID:     lb.ID,
 		Name:   lb.Name,
+		State:  lb.State,
 		Leader: lb.Leader,
 		Region: lb.Region,
 		FloatingIP: FloatingIP{

@@ -15,7 +15,7 @@ const (
 var (
 	lbSelect = squirrel.Select("id", "name", "region", "leader",
 		"floating_ip", "floating_ip_id", "digitalocean_access_token",
-		"is_deleted")
+		"is_deleted", "state")
 )
 
 type ModelConfig struct {
@@ -37,6 +37,7 @@ type LoadBalancer struct {
 	FloatingIpID            int    `stbl:"floating_ip_id"`
 	DigitaloceanAccessToken string `stbl:"digitalocean_access_token"`
 	IsDeleted               bool   `stbl:"is_deleted"`
+	State                   string `stbl:"state"`
 }
 
 // NewLoadBalancer creates a new LoadBalancers wired to structable.

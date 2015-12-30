@@ -148,8 +148,16 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 				"ip-id":      a.IpID,
 			}).Info("agent configured")
 		}(bo)
+
 	}
 
+	lbState := &LBState{
+		lbID:      bo.LoadBalancer.ID,
+		logger:    bo.Config.logger,
+		dbSession: bo.Config.DBSession,
+	}
+
+	go lbState.Track()
 	return nil
 }
 

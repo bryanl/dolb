@@ -116,13 +116,13 @@ func (ps *PgSession) LoadLoadBalancers() ([]LoadBalancer, error) {
 
 	var lbs []LoadBalancer
 	for rows.Next() {
-		var id, name, region, floatingIp, token string
+		var id, name, region, floatingIp, token, state string
 		var leader sql.NullString
 		var floatingIpID int
 		var isDeleted bool
 
 		err = rows.Scan(&id, &name, &region, &leader, &floatingIp, &floatingIpID,
-			&token, &isDeleted)
+			&token, &isDeleted, &state)
 		if err != nil {
 			logrus.WithError(err).Error("can't scan load balancer")
 			return nil, err
@@ -136,6 +136,7 @@ func (ps *PgSession) LoadLoadBalancers() ([]LoadBalancer, error) {
 		lb.FloatingIpID = floatingIpID
 		lb.DigitaloceanAccessToken = token
 		lb.IsDeleted = isDeleted
+		lb.State = state
 
 		if leader.Valid {
 			lb.Leader = leader.String

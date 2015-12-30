@@ -50,6 +50,13 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	if rr.IsLeader && lb.FloatingIp == "" {
+		if rr.FloatingIP == "" {
+			config.logger.WithFields(logrus.Fields{
+				"cluster-id": rr.ClusterID,
+			}).Error("no floating ip was sent")
+			return service.Response{Body: err, Status: 400}
+		}
+
 		godoc := config.DigitalOcean(lb.DigitaloceanAccessToken)
 		de, err := godoc.CreateDNS(fmt.Sprintf("c-%s", lb.Name), rr.FloatingIP)
 		if err != nil {

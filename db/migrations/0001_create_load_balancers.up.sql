@@ -6,5 +6,6 @@ CREATE TABLE load_balancers (
 	floating_ip varchar(15) NOT NULL DEFAULT '',
 	floating_ip_id integer NOT NULL DEFAULT 0,
 	digitalocean_access_token text NOT NULL DEFAULT '',
-	is_deleted boolean NOT NULL DEFAULT false
+	is_deleted boolean NOT NULL DEFAULT false,
+	state text NOT NULL DEFAULT 'initializing'
 );
