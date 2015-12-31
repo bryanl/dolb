@@ -39,6 +39,7 @@ type Handler struct {
 
 type HandlerConfig interface {
 	SetLogger(*log.Entry)
+	GetLogger() *log.Entry
 	IDGen() string
 }
 

@@ -42,6 +42,10 @@ type testLogger struct{}
 
 func (tl *testLogger) SetLogger(*logrus.Entry) {}
 
+func (tl *testLogger) GetLogger() *logrus.Entry { return &logrus.Entry{} }
+
+func (tl *testLogger) IDGen() string { return "id" }
+
 func TestHandler_ServeHTTP(t *testing.T) {
 	h := &Handler{
 		F: func(config interface{}, r *http.Request) Response {

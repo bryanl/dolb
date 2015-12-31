@@ -61,6 +61,7 @@ func main() {
 		log.Fatal("invalid SERVER_URL environment variable")
 	}
 
+	// FIXME is this too much config?
 	config := &agent.Config{
 		AgentID:           *agentID,
 		DigitalOceanToken: *doToken,
@@ -71,6 +72,9 @@ func main() {
 		Region:            *agentRegion,
 		Name:              *agentName,
 		ServerURL:         *serverURL,
+		ServiceManagerFactory: func(c *agent.Config) agent.ServiceManager {
+			return agent.NewEtcdServiceManager(c)
+		},
 	}
 
 	logger := log.WithField("agent-name", *agentName)

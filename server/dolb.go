@@ -41,6 +41,10 @@ func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
 }
 
+func (c *Config) GetLogger() *logrus.Entry {
+	return c.logger
+}
+
 func (c *Config) IDGen() string {
 	s, _ := dao.DefaultSnowflake()
 	ui, _ := s.Next()

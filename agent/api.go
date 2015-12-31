@@ -18,17 +18,18 @@ type Config struct {
 	sync.Mutex
 	ClusterStatus ClusterStatus
 
-	AgentID           string
-	Context           context.Context
-	ClusterName       string
-	ClusterID         string
-	DigitalOceanToken string
-	DropletID         string
-	Firewall          firewall.Firewall
-	KVS               KVS
-	Name              string
-	Region            string
-	ServerURL         string
+	AgentID               string
+	Context               context.Context
+	ClusterName           string
+	ClusterID             string
+	DigitalOceanToken     string
+	DropletID             string
+	Firewall              firewall.Firewall
+	KVS                   KVS
+	Name                  string
+	Region                string
+	ServerURL             string
+	ServiceManagerFactory ServiceManagerFactory
 
 	logger *logrus.Entry
 }
@@ -36,6 +37,10 @@ type Config struct {
 // SetLogger sets the logger for Config.
 func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
+}
+
+func (c *Config) GetLogger() *logrus.Entry {
+	return c.logger
 }
 
 func (c *Config) IDGen() string {
@@ -57,6 +62,7 @@ func NewAPI(config *Config) *API {
 	}
 
 	a.Mux.Handle("/", service.Handler{Config: config, F: RootHandler}).Methods("GET")
+	a.Mux.Handle("/services", service.Handler{Config: config, F: ServiceCreateHandler}).Methods("POST")
 
 	return a
 }
