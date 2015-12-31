@@ -1,14 +1,9 @@
-FROM golang:1.5.2
-
+FROM gliderlabs/alpine:3.3
 MAINTAINER Bryan Liles <bryanliles@gmail.com>
 
 EXPOSE 8889
 
-RUN apt-get update && apt-get install iptables -y
+RUN apk --update --no-cache  add ca-certificates iptables
+COPY cmd/dolb-agent/dolb-agent /
 
-ADD . /go/src/github.com/bryanl/dolb
-ENV GO15VENDOREXPERIMENT=1
-RUN go install github.com/bryanl/dolb/cmd/dolb-agent
-ENTRYPOINT /go/bin/dolb-agent
-
-
+ENTRYPOINT /dolb-agent
