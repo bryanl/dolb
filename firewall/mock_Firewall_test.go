@@ -30,3 +30,15 @@ func (_m *MockFirewall) Close(port int) error {
 
 	return r0
 }
+func (_m *MockFirewall) State() State {
+	ret := _m.Called()
+
+	var r0 State
+	if rf, ok := ret.Get(0).(func() State); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(State)
+	}
+
+	return r0
+}

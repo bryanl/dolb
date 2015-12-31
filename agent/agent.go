@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/firewall"
 	"github.com/bryanl/dolb/server"
 	"github.com/bryanl/dolb/service"
 )
@@ -113,6 +115,74 @@ func (a *Agent) PollClusterStatus() {
 
 			if err := pingServer(a.Config); err != nil {
 				a.Config.logger.WithError(err).Error("could not register agent")
+			}
+		}
+	}
+}
+
+func (a *Agent) PollFirewall() {
+	log := a.Config.logger
+	fw := a.Config.Firewall
+	fkvs := NewFirewallKVS(a.Config.KVS)
+
+	err := fkvs.Init()
+	if err != nil {
+		log.WithError(err).Error("unable to start firewall poller")
+	}
+
+	ticker := time.NewTicker(time.Second * 5)
+
+	log.Info("starting firewall poller")
+
+	for {
+		select {
+		case <-ticker.C:
+			if a.Config.ClusterStatus.IsLeader {
+				state, err := fw.State()
+				if err != nil {
+					log.WithError(err).Error("unable to load firewall state")
+					continue
+				}
+
+				rules, err := state.Rules()
+				if err != nil {
+					log.WithError(err).Error("unable to load firewall rules")
+					continue
+				}
+
+				m := map[int]*firewall.Rule{}
+				for _, r := range rules {
+					m[r.Destination] = &r
+				}
+
+				ports, err := fkvs.Ports()
+				if err != nil {
+					log.WithError(err).Error("unable to load ports from kvs")
+					continue
+				}
+
+				for _, p := range ports {
+					if m[p.Port] == nil {
+						// port rule doesn't exist in iptables
+						if p.Enabled {
+							log.WithField("firewall-port", p.Port).Info("opening firewall port")
+							err = fw.Open(p.Port)
+							if err != nil {
+								log.WithError(err).WithField("firewall-port", p.Port).Error("unable to open port")
+							}
+						}
+					} else {
+						// port rule exists in iptables
+						if !p.Enabled {
+							log.WithField("firewall-port", p.Port).Info("closing firewall port")
+							err = fw.Close(p.Port)
+							if err != nil {
+								log.WithError(err).WithField("firewall-port", p.Port).Error("unable to close port")
+							}
+						}
+					}
+				}
+
 			}
 		}
 	}

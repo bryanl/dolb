@@ -11,6 +11,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/agent"
+	"github.com/bryanl/dolb/firewall"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/ianschenck/envflag"
 	"github.com/tylerb/graceful"
@@ -72,7 +73,11 @@ func main() {
 		ServerURL:         *serverURL,
 	}
 
-	config.SetLogger(log.WithField("agent-name", *agentName))
+	logger := log.WithField("agent-name", *agentName)
+	config.SetLogger(logger)
+
+	ef := &firewall.LiveExecFactory{}
+	config.Firewall = firewall.NewIptablesFirewall(ef, logger)
 
 	kapi, err := genKeysAPI()
 	if err != nil {
@@ -93,6 +98,7 @@ func main() {
 	}
 
 	go a.PollClusterStatus()
+	go a.PollFirewall()
 
 	api := agent.NewAPI(config)
 

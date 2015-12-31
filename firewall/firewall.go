@@ -11,41 +11,61 @@ import (
 )
 
 var (
-	iptablesCmd = "/usr/sbin/iptables"
+	// IptablesCmd is the iptables bin location.
+	IptablesCmd = "/sbin/iptables"
 )
+
+// PortExistsError is an error when an iptables definition exists for a port.
+type PortExistsError struct {
+	Port int
+}
+
+func (e *PortExistsError) Error() string {
+	return fmt.Sprintf("rule for port %d exists in iptables", e.Port)
+}
 
 // Firewall is an interface for controlling a firewall.
 type Firewall interface {
 	Open(port int) error
 	Close(port int) error
+	State() (State, error)
 }
 
 // IptablesFirewall manages iptables firewalls.
 type IptablesFirewall struct {
 	log *logrus.Entry
 	ef  ExecFactory
-	fs  State
 }
 
 var _ Firewall = &IptablesFirewall{}
 
 // NewIptablesFirewall creates an instance of IptablesFirewall.
-func NewIptablesFirewall(ef ExecFactory, fs State, log *logrus.Entry) *IptablesFirewall {
+func NewIptablesFirewall(ef ExecFactory, log *logrus.Entry) *IptablesFirewall {
 	return &IptablesFirewall{
 		log: log,
 		ef:  ef,
-		fs:  fs,
 	}
+}
+
+// State is current state of the firewall.
+func (f *IptablesFirewall) State() (State, error) {
+	c := f.ef.NewCmd(IptablesCmd, "-nL", "Firewall-INPUT", "--line-numbers")
+	out, err := c.Exec()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewIptablesState(string(out))
 }
 
 // Open opens a port on the firewall.
 func (f *IptablesFirewall) Open(port int) error {
 	_, err := f.findRuleByPort(port)
 	if err == nil {
-		return fmt.Errorf("rule for port %d already exists in iptables", port)
+		return &PortExistsError{Port: port}
 	}
 
-	c := f.ef.NewCmd(iptablesCmd, f.tcpOpts(port)...)
+	c := f.ef.NewCmd(IptablesCmd, f.tcpOpts(port)...)
 	_, err = c.Exec()
 	return err
 }
@@ -69,14 +89,19 @@ func (f *IptablesFirewall) Close(port int) error {
 		return err
 	}
 
-	c := f.ef.NewCmd(iptablesCmd, f.closeOpts(*rule)...)
+	c := f.ef.NewCmd(IptablesCmd, f.closeOpts(*rule)...)
 	_, err = c.Exec()
 
 	return err
 }
 
 func (f *IptablesFirewall) findRuleByPort(port int) (*Rule, error) {
-	rules, err := f.fs.Rules()
+	state, err := f.State()
+	if err != nil {
+		return nil, err
+	}
+
+	rules, err := state.Rules()
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,8 @@ MAINTAINER Bryan Liles <bryanliles@gmail.com>
 
 EXPOSE 8889
 
+RUN apt-get update && apt-get install iptables -y
+
 ADD . /go/src/github.com/bryanl/dolb
 ENV GO15VENDOREXPERIMENT=1
 RUN go install github.com/bryanl/dolb/cmd/dolb-agent

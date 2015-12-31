@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/firewall"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -23,6 +24,7 @@ type Config struct {
 	ClusterID         string
 	DigitalOceanToken string
 	DropletID         string
+	Firewall          firewall.Firewall
 	KVS               KVS
 	Name              string
 	Region            string
