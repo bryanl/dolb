@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/firewall"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/server"
 	"github.com/bryanl/dolb/service"
 )
@@ -103,7 +104,7 @@ func (a *Agent) PollClusterStatus() {
 			}).Info("leader check")
 
 			if cs.IsLeader {
-				hkvs := NewHaproxyKVS(a.Config.KVS)
+				hkvs := kvs.NewHaproxy(a.Config.KVS, a.Config.GetLogger())
 
 				err := hkvs.Init()
 				if err != nil {
@@ -123,7 +124,7 @@ func (a *Agent) PollClusterStatus() {
 func (a *Agent) PollFirewall() {
 	log := a.Config.logger
 	fw := a.Config.Firewall
-	fkvs := NewFirewallKVS(a.Config.KVS)
+	fkvs := kvs.NewFirewallKVS(a.Config.KVS)
 
 	err := fkvs.Init()
 	if err != nil {

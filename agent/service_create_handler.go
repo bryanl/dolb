@@ -8,28 +8,11 @@ import (
 	"github.com/bryanl/dolb/service"
 )
 
-type EndpointRequest struct {
-	ServiceName string `json:"service_name"`
-	Domain      string `json:"domain"`
-	Regex       string `json:"url_regex"`
-}
-
-type EndpointResponse struct {
-	Domain    string     `json:"domain"`
-	Regex     string     `json:"url_regex"`
-	Upstreams []Upstream `json:"upstreams"`
-}
-
-type Upstream struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-}
-
 func ServiceCreateHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 	defer r.Body.Close()
 
-	var ereq EndpointRequest
+	var ereq service.EndpointRequest
 	err := json.NewDecoder(r.Body).Decode(&ereq)
 	if err != nil {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}

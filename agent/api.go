@@ -9,6 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/firewall"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -25,7 +26,7 @@ type Config struct {
 	DigitalOceanToken     string
 	DropletID             string
 	Firewall              firewall.Firewall
-	KVS                   KVS
+	KVS                   kvs.KVS
 	Name                  string
 	Region                string
 	ServerURL             string
@@ -63,6 +64,29 @@ func NewAPI(config *Config) *API {
 
 	a.Mux.Handle("/", service.Handler{Config: config, F: RootHandler}).Methods("GET")
 	a.Mux.Handle("/services", service.Handler{Config: config, F: ServiceCreateHandler}).Methods("POST")
+	a.Mux.Handle("/services", service.Handler{Config: config, F: ServiceListHandler}).Methods("GET")
+	a.Mux.Handle("/services/{service}", service.Handler{Config: config, F: ServiceRetrieveHandler}).Methods("GET")
+	a.Mux.Handle("/services/{service}/upstreams", service.Handler{Config: config, F: UpstreamCreateHandler}).Methods("PUT")
 
 	return a
+}
+
+func convertServiceToResponse(s kvs.Service) service.ServiceResponse {
+	sr := service.ServiceResponse{
+		Name:      s.Name(),
+		Type:      s.Type(),
+		Config:    map[string]interface{}{},
+		Upstreams: []service.UpstreamResponse{},
+	}
+
+	for k, v := range s.ServiceConfig() {
+		sr.Config[k] = v
+	}
+
+	for _, u := range s.Upstreams() {
+		sr.Upstreams = append(sr.Upstreams, service.UpstreamResponse{Host: u.Host, Port: u.Port})
+	}
+
+	return sr
+
 }

@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bryanl/dolb/kvs"
 	etcdclient "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
 )
@@ -18,15 +19,15 @@ type etcdLocker struct {
 	context context.Context
 	key     string
 	who     string
-	kvs     KVS
+	kv      kvs.KVS
 }
 
-func newEtcdLocker(context context.Context, key, who string, kvs KVS) *etcdLocker {
+func newEtcdLocker(context context.Context, key, who string, kv kvs.KVS) *etcdLocker {
 	return &etcdLocker{
 		context: context,
 		key:     key,
 		who:     who,
-		kvs:     kvs,
+		kv:      kv,
 	}
 }
 
@@ -34,7 +35,7 @@ var _ Locker = &etcdLocker{}
 
 func (el *etcdLocker) Lock() error {
 	for {
-		_, err := el.kvs.Get(el.lockKey(), nil)
+		_, err := el.kv.Get(el.lockKey(), nil)
 		if err != nil {
 			if eerr, ok := err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeNodeExist {
 				break
@@ -44,12 +45,12 @@ func (el *etcdLocker) Lock() error {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	_, err := el.kvs.Set(el.lockKey(), el.who, nil)
+	_, err := el.kv.Set(el.lockKey(), el.who, nil)
 	return err
 }
 
 func (el *etcdLocker) Unlock() error {
-	return el.kvs.Delete(el.lockKey())
+	return el.kv.Delete(el.lockKey())
 }
 
 func (el *etcdLocker) lockKey() string {

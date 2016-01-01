@@ -6,22 +6,23 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/context"
 )
 
 type mockEtcdClusterMember func(*ClusterMember, *myMocks)
 type myMocks struct {
-	KVS *mockKVS
+	KVS *kvs.MockKVS
 }
 
 func withTestClusterMember(fn mockEtcdClusterMember) {
 	em := &myMocks{
-		KVS: &mockKVS{},
+		KVS: &kvs.MockKVS{},
 	}
 
 	cm := &ClusterMember{
-		cmKVS:   NewCmKVS(em.KVS, 5*time.Second),
+		cmKVS:   kvs.NewCluster(em.KVS, 5*time.Second),
 		context: context.Background(),
 		logger:  logrus.WithField("testing", true),
 		name:    "test",
@@ -38,10 +39,10 @@ func withTestClusterMember(fn mockEtcdClusterMember) {
 func TestNewClusterMember(t *testing.T) {
 	name := "test"
 
-	kvs := &mockKVS{}
+	kv := &kvs.MockKVS{}
 
 	c := &Config{
-		KVS:     kvs,
+		KVS:     kv,
 		Context: context.Background(),
 	}
 	cm := NewClusterMember(name, c)
@@ -77,8 +78,8 @@ func TestClusterMember_Start(t *testing.T) {
 			// no op
 		}
 
-		opts := &SetOptions{TTL: time.Second * 5}
-		node := &Node{ModifiedIndex: 99}
+		opts := &kvs.SetOptions{TTL: time.Second * 5}
+		node := &kvs.Node{ModifiedIndex: 99}
 		em.KVS.On("Set", "/agent/leader/test", "test", opts).Return(node, nil)
 
 		err := cm.Start()
@@ -98,10 +99,10 @@ func Test_poll(t *testing.T) {
 	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		cm.started = true
 
-		opts := &GetOptions{Recursive: true}
-		node := &Node{
-			Nodes: Nodes{
-				&Node{ModifiedIndex: 5, CreatedIndex: 1, Value: cm.name},
+		opts := &kvs.GetOptions{Recursive: true}
+		node := &kvs.Node{
+			Nodes: kvs.Nodes{
+				{ModifiedIndex: 5, CreatedIndex: 1, Value: cm.name},
 			},
 		}
 
@@ -118,8 +119,8 @@ func Test_refresh(t *testing.T) {
 	withTestClusterMember(func(cm *ClusterMember, em *myMocks) {
 		cm.started = true
 
-		opts := &SetOptions{TTL: 5 * time.Second}
-		node := &Node{ModifiedIndex: 99}
+		opts := &kvs.SetOptions{TTL: 5 * time.Second}
+		node := &kvs.Node{ModifiedIndex: 99}
 		em.KVS.On("Set", "/agent/leader/test", "test", opts).Return(node, nil)
 
 		refresh(cm)

@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/mocks"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/digitalocean/godo"
@@ -30,14 +31,14 @@ type testFloatingIPManager func(*EtcdFloatingIPManager, *fimMocks)
 type fimMocks struct {
 	FIPService        *mocks.FloatingIPsService
 	FIPActionsService *mocks.FloatingIPActionsService
-	KVS               *mockKVS
+	KVS               *kvs.MockKVS
 }
 
 func withTestFloatingIPManager(fn testFloatingIPManager) {
 	fm := &fimMocks{
 		FIPService:        &mocks.FloatingIPsService{},
 		FIPActionsService: &mocks.FloatingIPActionsService{},
-		KVS:               &mockKVS{},
+		KVS:               &kvs.MockKVS{},
 	}
 
 	godoClient := &godo.Client{
@@ -49,7 +50,7 @@ func withTestFloatingIPManager(fn testFloatingIPManager) {
 		context:    context.Background(),
 		dropletID:  "12345",
 		godoClient: godoClient,
-		fipKVS:     NewFipKVS(fm.KVS),
+		fipKVS:     kvs.NewFipKVS(fm.KVS),
 		locker:     &memLocker{},
 		logger:     logrus.WithField("test", "test"),
 		assignNewIP: func(*EtcdFloatingIPManager) (string, error) {
@@ -85,8 +86,8 @@ func TestFloatingIPManager_Reserve(t *testing.T) {
 func TestFloatingIPManager_Reserve_no_ip(t *testing.T) {
 	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
 		fim.existingIP = func(*EtcdFloatingIPManager) (string, error) {
-			err := &KVError{
-				err: etcdclient.Error{
+			err := &kvs.KVError{
+				Err: etcdclient.Error{
 					Code: etcdclient.ErrorCodeKeyNotFound,
 				},
 			}
@@ -150,7 +151,7 @@ func TestFloatingIPManager_Reserve_not_leader(t *testing.T) {
 
 func Test_existingIP(t *testing.T) {
 	withTestFloatingIPManager(func(fim *EtcdFloatingIPManager, fm *fimMocks) {
-		node := &Node{Value: "192.168.1.2"}
+		node := &kvs.Node{Value: "192.168.1.2"}
 
 		fm.KVS.On("Get", fipKey, mock.Anything).Return(node, nil)
 
@@ -181,7 +182,7 @@ func Test_assignNewIP(t *testing.T) {
 		}
 
 		fm.FIPService.On("Create", mock.Anything).Return(fip, nil, nil)
-		fm.KVS.On("Set", fipKey, fip.IP, mock.Anything).Return(&Node{}, nil)
+		fm.KVS.On("Set", fipKey, fip.IP, mock.Anything).Return(&kvs.Node{}, nil)
 
 		ip, err := assignNewIP(fim)
 		assert.NoError(t, err)

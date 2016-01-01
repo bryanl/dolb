@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/agent"
 	"github.com/bryanl/dolb/firewall"
+	"github.com/bryanl/dolb/kvs"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/ianschenck/envflag"
 	"github.com/tylerb/graceful"
@@ -88,7 +89,7 @@ func main() {
 		log.WithError(err).Fatal("could not create keys api client")
 	}
 
-	config.KVS = agent.NewEtcdKVS(config.Context, kapi)
+	config.KVS = kvs.NewEtcd(config.Context, kapi)
 
 	cm := agent.NewClusterMember(*agentName, config)
 	err = cm.Start()

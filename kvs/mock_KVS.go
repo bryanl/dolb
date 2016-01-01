@@ -1,12 +1,12 @@
-package agent
+package kvs
 
 import "github.com/stretchr/testify/mock"
 
-type mockKVS struct {
+type MockKVS struct {
 	mock.Mock
 }
 
-func (_m *mockKVS) Delete(key string) error {
+func (_m *MockKVS) Delete(key string) error {
 	ret := _m.Called(key)
 
 	var r0 error
@@ -18,7 +18,7 @@ func (_m *mockKVS) Delete(key string) error {
 
 	return r0
 }
-func (_m *mockKVS) Get(key string, options *GetOptions) (*Node, error) {
+func (_m *MockKVS) Get(key string, options *GetOptions) (*Node, error) {
 	ret := _m.Called(key, options)
 
 	var r0 *Node
@@ -39,7 +39,7 @@ func (_m *mockKVS) Get(key string, options *GetOptions) (*Node, error) {
 
 	return r0, r1
 }
-func (_m *mockKVS) Mkdir(dir string) error {
+func (_m *MockKVS) Mkdir(dir string) error {
 	ret := _m.Called(dir)
 
 	var r0 error
@@ -51,7 +51,7 @@ func (_m *mockKVS) Mkdir(dir string) error {
 
 	return r0
 }
-func (_m *mockKVS) Rmdir(dir string) error {
+func (_m *MockKVS) Rmdir(dir string) error {
 	ret := _m.Called(dir)
 
 	var r0 error
@@ -63,8 +63,7 @@ func (_m *mockKVS) Rmdir(dir string) error {
 
 	return r0
 }
-
-func (_m *mockKVS) Set(key string, value string, options *SetOptions) (*Node, error) {
+func (_m *MockKVS) Set(key string, value string, options *SetOptions) (*Node, error) {
 	ret := _m.Called(key, value, options)
 
 	var r0 *Node

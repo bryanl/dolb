@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/kvs"
 )
 
 var (
@@ -41,7 +42,7 @@ type ClusterStatus struct {
 
 // ClusterMember is an agent cluster membership.
 type ClusterMember struct {
-	cmKVS   *CmKVS
+	cmKVS   *kvs.Cluster
 	context context.Context
 	name    string
 	root    string
@@ -62,7 +63,7 @@ type ClusterMember struct {
 // NewClusterMember builds a ClusterMember.
 func NewClusterMember(name string, config *Config) *ClusterMember {
 	return &ClusterMember{
-		cmKVS:   NewCmKVS(config.KVS, checkTTL),
+		cmKVS:   kvs.NewCluster(config.KVS, checkTTL),
 		context: config.Context,
 		logger: logrus.WithFields(logrus.Fields{
 			"member-name": name,

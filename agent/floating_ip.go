@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/do"
+	"github.com/bryanl/dolb/kvs"
 	etcdclient "github.com/coreos/etcd/client"
 	"github.com/digitalocean/godo"
 	"golang.org/x/net/context"
@@ -29,7 +30,7 @@ type EtcdFloatingIPManager struct {
 	context    context.Context
 	dropletID  string
 	godoClient *godo.Client
-	fipKVS     *FipKVS
+	fipKVS     *kvs.FipKVS
 	locker     Locker
 	name       string
 	logger     *logrus.Entry
@@ -50,14 +51,14 @@ func NewFloatingIPManager(config *Config) (*EtcdFloatingIPManager, error) {
 		context: config.Context,
 		key:     "/agent/floating_ip",
 		who:     config.Name,
-		kvs:     config.KVS,
+		kv:      config.KVS,
 	}
 
 	return &EtcdFloatingIPManager{
 		context:    config.Context,
 		dropletID:  config.DropletID,
 		godoClient: do.GodoClientFactory(config.DigitalOceanToken),
-		fipKVS:     NewFipKVS(config.KVS),
+		fipKVS:     kvs.NewFipKVS(config.KVS),
 		locker:     locker,
 		logger:     config.logger,
 
@@ -72,8 +73,8 @@ func (fim *EtcdFloatingIPManager) Reserve() (string, error) {
 
 	ip, err := fim.existingIP(fim)
 	if err != nil {
-		if kverr, ok := err.(*KVError); ok {
-			if eerr, ok := kverr.err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeKeyNotFound {
+		if kverr, ok := err.(*kvs.KVError); ok {
+			if eerr, ok := kverr.Err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeKeyNotFound {
 				ip, err = fim.assignNewIP(fim)
 				if err != nil {
 					logrus.WithError(err).Error("could not assign ip")
