@@ -12,7 +12,7 @@ func ServiceCreateHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 	defer r.Body.Close()
 
-	var ereq service.EndpointRequest
+	var ereq service.ServiceCreateRequest
 	err := json.NewDecoder(r.Body).Decode(&ereq)
 	if err != nil {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}

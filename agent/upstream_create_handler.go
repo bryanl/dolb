@@ -38,5 +38,7 @@ func UpstreamCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: err, Status: 400}
 	}
 
-	return service.Response{Body: svc, Status: http.StatusOK}
+	sr := convertServiceToResponse(svc)
+
+	return service.Response{Body: sr, Status: http.StatusOK}
 }

@@ -67,6 +67,7 @@ func NewAPI(config *Config) *API {
 	a.Mux.Handle("/services", service.Handler{Config: config, F: ServiceListHandler}).Methods("GET")
 	a.Mux.Handle("/services/{service}", service.Handler{Config: config, F: ServiceRetrieveHandler}).Methods("GET")
 	a.Mux.Handle("/services/{service}/upstreams", service.Handler{Config: config, F: UpstreamCreateHandler}).Methods("PUT")
+	a.Mux.Handle("/services/{service}/upstreams/{upstream}", service.Handler{Config: config, F: UpstreamDeleteHandler}).Methods("DELETE")
 
 	return a
 }
@@ -84,7 +85,12 @@ func convertServiceToResponse(s kvs.Service) service.ServiceResponse {
 	}
 
 	for _, u := range s.Upstreams() {
-		sr.Upstreams = append(sr.Upstreams, service.UpstreamResponse{ID: u.ID, Host: u.Host, Port: u.Port})
+		ur := service.UpstreamResponse{
+			ID:   u.ID,
+			Host: u.Host,
+			Port: u.Port,
+		}
+		sr.Upstreams = append(sr.Upstreams, ur)
 	}
 
 	return sr

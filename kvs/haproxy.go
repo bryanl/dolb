@@ -130,6 +130,11 @@ func (h *Haproxy) Upstream(app, address string) error {
 	return err
 }
 
+func (h *Haproxy) DeleteUpstream(app, id string) error {
+	key := h.serviceKey(app, "/upstreams/%s", id)
+	return h.Delete(key)
+}
+
 func (h *Haproxy) serviceKey(service, format string, a ...interface{}) string {
 	return fmt.Sprintf("%s/services/%s"+format, append([]interface{}{h.RootKey, service}, a...)...)
 }

@@ -11,7 +11,8 @@ import (
 
 type ServiceManager interface {
 	AddUpstream(service string, ucr UpstreamCreateRequest) error
-	Create(service.EndpointRequest) error
+	DeleteUpstream(service, upstreamID string) error
+	Create(service.ServiceCreateRequest) error
 	Services() ([]kvs.Service, error)
 	Service(name string) (kvs.Service, error)
 }
@@ -19,23 +20,23 @@ type ServiceManager interface {
 type ServiceManagerFactory func(c *Config) ServiceManager
 
 type EtcdServiceManager struct {
-	HKVS *kvs.Haproxy
-	Log  *logrus.Entry
+	Haproxy *kvs.Haproxy
+	Log     *logrus.Entry
 }
 
 var _ ServiceManager = &EtcdServiceManager{}
 
 func NewEtcdServiceManager(c *Config) ServiceManager {
 	return &EtcdServiceManager{
-		HKVS: kvs.NewHaproxy(c.KVS, c.IDGen, c.GetLogger()),
-		Log:  c.GetLogger(),
+		Haproxy: kvs.NewHaproxy(c.KVS, c.IDGen, c.GetLogger()),
+		Log:     c.GetLogger(),
 	}
 }
 
-func (esm *EtcdServiceManager) Create(er service.EndpointRequest) error {
+func (esm *EtcdServiceManager) Create(er service.ServiceCreateRequest) error {
 	log := esm.Log
 
-	if er.ServiceName == "" {
+	if er.Name == "" {
 		return errors.New("invalid service name")
 	}
 
@@ -46,26 +47,26 @@ func (esm *EtcdServiceManager) Create(er service.EndpointRequest) error {
 	if er.Domain != "" {
 		log.WithFields(logrus.Fields{
 			"domain":       er.Domain,
-			"service-name": er.ServiceName,
+			"service-name": er.Name,
 		}).Info("createing domain service")
-		return esm.HKVS.Domain(er.ServiceName, er.Domain)
+		return esm.Haproxy.Domain(er.Name, er.Domain)
 	}
 
 	log.WithFields(logrus.Fields{
 		"regex":        er.Regex,
-		"service-name": er.ServiceName,
+		"service-name": er.Name,
 	}).Info("creating regex service")
-	return esm.HKVS.URLReg(er.ServiceName, er.Regex)
+	return esm.Haproxy.URLReg(er.Name, er.Regex)
 }
 
 func (esm *EtcdServiceManager) Services() ([]kvs.Service, error) {
 	esm.Log.Info("retrieving services")
-	return esm.HKVS.Services()
+	return esm.Haproxy.Services()
 }
 
 func (esm *EtcdServiceManager) Service(name string) (kvs.Service, error) {
 	esm.Log.WithField("service", name).Info("retrieving service")
-	return esm.HKVS.Service(name)
+	return esm.Haproxy.Service(name)
 }
 
 func (esm *EtcdServiceManager) AddUpstream(service string, ucr UpstreamCreateRequest) error {
@@ -76,5 +77,13 @@ func (esm *EtcdServiceManager) AddUpstream(service string, ucr UpstreamCreateReq
 		"host":   ucr.Host,
 		"port":   ucr.Port,
 	}).Info("adding upstream to server")
-	return esm.HKVS.Upstream(service, addr)
+	return esm.Haproxy.Upstream(service, addr)
+}
+
+func (esm *EtcdServiceManager) DeleteUpstream(service, id string) error {
+	esm.Log.WithFields(logrus.Fields{
+		"upstream-id":  id,
+		"service-name": service,
+	}).Info("removing upstream from service")
+	return esm.Haproxy.DeleteUpstream(service, id)
 }

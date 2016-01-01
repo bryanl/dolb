@@ -197,4 +197,25 @@ var _ = Describe("Haproxy", func() {
 
 	})
 
+	Describe("DeleteUpstream", func() {
+		JustBeforeEach(func() {
+			err = haproxy.DeleteUpstream("service-a", "999")
+		})
+
+		Context("with valid inputs", func() {
+
+			BeforeEach(func() {
+				kvs.On("Delete", "/haproxy-discover/services/service-a/upstreams/999").Return(nil)
+			})
+
+			AfterEach(func() {
+				kvs.AssertExpectations(GinkgoT())
+			})
+
+			It("doesn't not return an error", func() {
+				Ω(err).ToNot(HaveOccurred())
+			})
+		})
+	})
+
 })
