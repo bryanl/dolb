@@ -27,7 +27,7 @@ var _ ServiceManager = &EtcdServiceManager{}
 
 func NewEtcdServiceManager(c *Config) ServiceManager {
 	return &EtcdServiceManager{
-		HKVS: kvs.NewHaproxy(c.KVS, c.GetLogger()),
+		HKVS: kvs.NewHaproxy(c.KVS, c.IDGen, c.GetLogger()),
 		Log:  c.GetLogger(),
 	}
 }
@@ -76,5 +76,5 @@ func (esm *EtcdServiceManager) AddUpstream(service string, ucr UpstreamCreateReq
 		"host":   ucr.Host,
 		"port":   ucr.Port,
 	}).Info("adding upstream to server")
-	return esm.HKVS.Upstream(service, addr, addr)
+	return esm.HKVS.Upstream(service, addr)
 }

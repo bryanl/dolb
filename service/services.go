@@ -18,6 +18,7 @@ type ServiceResponse struct {
 }
 
 type UpstreamResponse struct {
+	ID   string `json:"id"`
 	Host string `json:"host"`
 	Port int    `json:"port"`
 }

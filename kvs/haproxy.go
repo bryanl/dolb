@@ -19,6 +19,7 @@ type Service interface {
 type ServiceConfig map[string]interface{}
 
 type Upstream struct {
+	ID   string
 	Host string
 	Port int
 }
@@ -59,16 +60,20 @@ func (hs *HTTPService) ServiceConfig() ServiceConfig {
 	return hs.serviceConfig
 }
 
+type IDGenFN func() string
+
 // HaproxyKVS is a haproxy management kvs.
 type Haproxy struct {
+	IDGen IDGenFN
 	KVS
 	RootKey string
 	log     *logrus.Entry
 }
 
 // NewHaproxyKVS builds a HaproxyKVS instance.
-func NewHaproxy(backend KVS, log *logrus.Entry) *Haproxy {
+func NewHaproxy(backend KVS, idGen IDGenFN, log *logrus.Entry) *Haproxy {
 	return &Haproxy{
+		IDGen:   idGen,
 		KVS:     backend,
 		RootKey: "/haproxy-discover",
 		log:     log,
@@ -119,8 +124,8 @@ func (h *Haproxy) URLReg(app, reg string) error {
 }
 
 // Upstream sets a new upstream node.
-func (h *Haproxy) Upstream(app, service, address string) error {
-	key := h.serviceKey(app, "/upstreams/%s", service)
+func (h *Haproxy) Upstream(app, address string) error {
+	key := h.serviceKey(app, "/upstreams/%s", h.IDGen())
 	_, err := h.Set(key, address, nil)
 	return err
 }
@@ -210,6 +215,7 @@ func (h *Haproxy) findUpstreams(name string) ([]Upstream, error) {
 	}).Info("upstreams")
 
 	for _, u := range node.Nodes {
+		uName := strings.TrimPrefix(u.Key, key+"/")
 		host, port, err := net.SplitHostPort(u.Value)
 		if err != nil {
 			return nil, err
@@ -220,7 +226,7 @@ func (h *Haproxy) findUpstreams(name string) ([]Upstream, error) {
 			return nil, err
 		}
 
-		upstream := Upstream{Host: host, Port: portInt}
+		upstream := Upstream{ID: uName, Host: host, Port: portInt}
 		upstreams = append(upstreams, upstream)
 	}
 

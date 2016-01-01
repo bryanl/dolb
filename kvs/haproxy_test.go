@@ -1,6 +1,8 @@
 package kvs_test
 
 import (
+	"strconv"
+
 	"github.com/Sirupsen/logrus"
 	. "github.com/bryanl/dolb/kvs"
 
@@ -11,6 +13,11 @@ import (
 var _ = Describe("Haproxy", func() {
 
 	var (
+		i     int
+		idGen = func() string {
+			i += 1
+			return strconv.Itoa(i)
+		}
 		kvs     *MockKVS
 		haproxy *Haproxy
 		err     error
@@ -19,7 +26,7 @@ var _ = Describe("Haproxy", func() {
 
 	BeforeEach(func() {
 		kvs = &MockKVS{}
-		haproxy = NewHaproxy(kvs, log)
+		haproxy = NewHaproxy(kvs, idGen, log)
 	})
 
 	Describe("Init", func() {
@@ -92,7 +99,7 @@ var _ = Describe("Haproxy", func() {
 	Describe("Upstream", func() {
 
 		JustBeforeEach(func() {
-			err = haproxy.Upstream("app", "node:80", "node:80")
+			err = haproxy.Upstream("app", "node:80")
 		})
 
 		Context("with valid inputs", func() {
@@ -100,7 +107,7 @@ var _ = Describe("Haproxy", func() {
 			BeforeEach(func() {
 				var opts *SetOptions
 				node := &Node{}
-				kvs.On("Set", "/haproxy-discover/services/app/upstreams/node:80", "node:80", opts).Return(node, nil)
+				kvs.On("Set", "/haproxy-discover/services/app/upstreams/1", "node:80", opts).Return(node, nil)
 			})
 
 			It("doesn't return an error", func() {
@@ -144,19 +151,21 @@ var _ = Describe("Haproxy", func() {
 				node5 := &Node{Value: ".*"}
 				kvs.On("Get", "/haproxy-discover/services/service-b/url_reg", opts).Return(node5, nil)
 
+				ka := "/haproxy-discover/services/service-a/upstreams"
 				node6 := &Node{
 					Nodes: Nodes{
-						{Value: "host-a:80"},
-						{Value: "host-b:80"},
+						{Key: ka + "/a", Value: "host-a:80"},
+						{Key: ka + "/b", Value: "host-b:80"},
 					},
 				}
 				kvs.On("Get", "/haproxy-discover/services/service-a/upstreams", opts).Return(node6, nil)
 
+				kb := "/haproxy-discover/services/service-b/upstreams"
 				node7 := &Node{
 					Nodes: Nodes{
-						{Value: "host-c:80"},
-						{Value: "host-d:80"},
-						{Value: "host-e:80"},
+						{Key: kb + "/c", Value: "host-c:80"},
+						{Key: kb + "/d", Value: "host-d:80"},
+						{Key: kb + "/e", Value: "host-e:80"},
 					},
 				}
 				kvs.On("Get", "/haproxy-discover/services/service-b/upstreams", opts).Return(node7, nil)
@@ -181,6 +190,7 @@ var _ = Describe("Haproxy", func() {
 				Ω(services[1].ServiceConfig()["matcher"]).To(Equal("url_reg"))
 				Ω(services[1].ServiceConfig()["url_reg"]).To(Equal(".*"))
 				Ω(services[1].Upstreams()).To(HaveLen(3))
+				Ω(services[1].Upstreams()[0].ID).To(Equal("c"))
 
 			})
 		})

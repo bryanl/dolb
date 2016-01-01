@@ -84,7 +84,7 @@ func convertServiceToResponse(s kvs.Service) service.ServiceResponse {
 	}
 
 	for _, u := range s.Upstreams() {
-		sr.Upstreams = append(sr.Upstreams, service.UpstreamResponse{Host: u.Host, Port: u.Port})
+		sr.Upstreams = append(sr.Upstreams, service.UpstreamResponse{ID: u.ID, Host: u.Host, Port: u.Port})
 	}
 
 	return sr
