@@ -167,7 +167,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("with success", func() {
 			BeforeEach(func() {
-				cOpts := &client.DeleteOptions{Dir: true}
+				cOpts := &client.DeleteOptions{Dir: true, Recursive: true}
 				kaMock.On("Delete", ctx, "/foo", cOpts).Return(nil, nil).Once()
 			})
 
@@ -178,7 +178,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("with failure", func() {
 			BeforeEach(func() {
-				cOpts := &client.DeleteOptions{Dir: true}
+				cOpts := &client.DeleteOptions{Dir: true, Recursive: true}
 				kaMock.On("Delete", ctx, "/foo", cOpts).Return(nil, failErr).Once()
 			})
 

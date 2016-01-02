@@ -104,7 +104,8 @@ func (ekvs *Etcd) convertNode(in *etcdclient.Node) *Node {
 // Rmdir removes a directory from the kvs.
 func (ekvs *Etcd) Rmdir(dir string) error {
 	opts := &etcdclient.DeleteOptions{
-		Dir: true,
+		Dir:       true,
+		Recursive: true,
 	}
 
 	_, err := ekvs.ksapi.Delete(ekvs.ctx, dir, opts)
