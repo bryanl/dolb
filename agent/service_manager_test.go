@@ -212,4 +212,27 @@ var _ = Describe("EtcdServiceManager", func() {
 		})
 	})
 
+	Describe("DeleteService", func() {
+		var (
+			svcName string
+		)
+
+		JustBeforeEach(func() {
+			err = serviceManager.DeleteService(svcName)
+		})
+
+		Context("with a successful haproxy call", func() {
+
+			BeforeEach(func() {
+				svcName = "service-b"
+				haproxy.On("DeleteService", svcName).Return(nil)
+			})
+
+			It("doesn't return an error", func() {
+				Ω(err).ToNot(HaveOccurred())
+			})
+
+		})
+	})
+
 })

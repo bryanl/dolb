@@ -10,8 +10,9 @@ import (
 )
 
 type ServiceManager interface {
-	AddUpstream(service string, ucr UpstreamCreateRequest) error
-	DeleteUpstream(service, upstreamID string) error
+	AddUpstream(svc string, ucr UpstreamCreateRequest) error
+	DeleteService(svcName string) error
+	DeleteUpstream(svc, upstreamID string) error
 	Create(service.ServiceCreateRequest) error
 	Services() ([]kvs.Service, error)
 	Service(name string) (kvs.Service, error)
@@ -69,21 +70,28 @@ func (esm *EtcdServiceManager) Service(name string) (kvs.Service, error) {
 	return esm.Haproxy.Service(name)
 }
 
-func (esm *EtcdServiceManager) AddUpstream(service string, ucr UpstreamCreateRequest) error {
+func (esm *EtcdServiceManager) AddUpstream(svc string, ucr UpstreamCreateRequest) error {
 	addr := fmt.Sprintf("%s:%d", ucr.Host, ucr.Port)
 
 	esm.Log.WithFields(logrus.Fields{
-		"server": service,
+		"server": svc,
 		"host":   ucr.Host,
 		"port":   ucr.Port,
 	}).Info("adding upstream to server")
-	return esm.Haproxy.Upstream(service, addr)
+	return esm.Haproxy.Upstream(svc, addr)
 }
 
-func (esm *EtcdServiceManager) DeleteUpstream(service, id string) error {
+func (esm *EtcdServiceManager) DeleteUpstream(svc, id string) error {
 	esm.Log.WithFields(logrus.Fields{
 		"upstream-id":  id,
-		"service-name": service,
+		"service-name": svc,
 	}).Info("removing upstream from service")
-	return esm.Haproxy.DeleteUpstream(service, id)
+	return esm.Haproxy.DeleteUpstream(svc, id)
+}
+
+func (esm *EtcdServiceManager) DeleteService(svc string) error {
+	esm.Log.WithFields(logrus.Fields{
+		"service-name": svc,
+	}).Info("removing service")
+	return esm.Haproxy.DeleteService(svc)
 }
