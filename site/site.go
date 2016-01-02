@@ -8,6 +8,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
 	"github.com/gorilla/mux"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/digitalocean"
 )
 
 type Site struct {
@@ -16,16 +19,30 @@ type Site struct {
 }
 
 func New() *Site {
+	clientID := "ed07f403db0397d43d4d026275203d03a4a2de2b24bf8ca2d7b6fff8987ddd5e"
+	clientSecret := "ad20064ec058d771cd61b5c15f58b8a06cf6af072a9b5d6f63e812c82b7c6518"
+
+	gothic.CompleteUserAuth = completeUserAuth
+	goth.UseProviders(
+		digitalocean.New(clientID, clientSecret, "https://dolb.ngrok.io/auth/digitalocean/callback", "read write"),
+	)
+
 	router := mux.NewRouter()
-
 	loggingRouter := loggingMiddleware(idGen, router)
+	router.NotFoundHandler = loggingMiddleware(idGen, http.HandlerFunc(notFound))
+	s := &Site{Mux: loggingRouter}
 
-	s := &Site{
-		Mux: loggingRouter,
-	}
+	// auth
+	router.HandleFunc("/auth/digitalocean", beginGoth).Methods("GET")
+	router.HandleFunc("/auth/{provider}/callback", gothCallback).Methods("GET")
 
+	homeHandler := &HomeHandler{}
+	router.Handle("/", loggingMiddleware(idGen, homeHandler)).Methods("GET")
+
+	// define this last
 	assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"
-	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(assetDir))))
+	fs := loggingMiddleware(idGen, http.StripPrefix("/", http.FileServer(http.Dir(assetDir))))
+	router.PathPrefix("/{_dummy:.*}").Handler(fs)
 
 	return s
 }
@@ -57,6 +74,7 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	loggedWriter := &loggedResponse{w: w}
 
 	h.handler.ServeHTTP(loggedWriter, req)
+
 	totalTime := time.Now().Sub(now)
 	logger.WithFields(logrus.Fields{
 		"action":            "site request",

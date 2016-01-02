@@ -55,6 +55,7 @@ func main() {
 	rootMux.Handle("/api/", serverAPI.Mux)
 	rootMux.Handle("/api/{_dummy:.*}", serverAPI.Mux)
 	rootMux.Handle("/", dolbSite.Mux)
+	rootMux.Handle("/{_dummy:.*}", dolbSite.Mux)
 
 	errChan := make(chan error)
 	go func() {
