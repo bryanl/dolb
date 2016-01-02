@@ -9,6 +9,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/server"
+	"github.com/bryanl/dolb/site"
+	"github.com/gorilla/mux"
 	"github.com/ianschenck/envflag"
 	"github.com/tylerb/graceful"
 )
@@ -42,10 +44,17 @@ func main() {
 	}
 
 	c := server.NewConfig(baseDomain, *serverURL, sess)
-	api, err := server.New(c)
+	serverAPI, err := server.New(c)
 	if err != nil {
 		log.WithError(err).Fatal("could not create Api")
 	}
+
+	dolbSite := site.New()
+
+	rootMux := mux.NewRouter()
+	rootMux.Handle("/api/", serverAPI.Mux)
+	rootMux.Handle("/api/{_dummy:.*}", serverAPI.Mux)
+	rootMux.Handle("/", dolbSite.Mux)
 
 	errChan := make(chan error)
 	go func() {
@@ -53,7 +62,7 @@ func main() {
 			Timeout: 10 * time.Second,
 			Server: &http.Server{
 				Addr:    *addr,
-				Handler: api.Mux,
+				Handler: rootMux,
 			},
 		}
 

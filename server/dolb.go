@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"net/http"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -58,24 +59,26 @@ func (c *Config) DigitalOcean(token string) do.DigitalOcean {
 
 // API is a the load balancer API.
 type API struct {
-	Mux *mux.Router
+	Mux http.Handler
 }
 
 // New creates an instance of API.
 func New(config *Config) (*API, error) {
+	mux := mux.NewRouter()
+
 	a := &API{
-		Mux: mux.NewRouter(),
+		Mux: mux,
 	}
 
 	if config.ServerURL == "" {
 		return nil, errors.New("missing ServerURL")
 	}
 
-	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBListHandler}).Methods("GET")
-	a.Mux.Handle("/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
-	a.Mux.Handle("/lb/{lb_id}", service.Handler{Config: config, F: LBRetrieveHandler}).Methods("GET")
-	a.Mux.Handle("/lb/{lb_id}", service.Handler{Config: config, F: LBDeleteHandler}).Methods("DELETE")
-	a.Mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
+	mux.Handle("/api/lb", service.Handler{Config: config, F: LBListHandler}).Methods("GET")
+	mux.Handle("/api/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
+	mux.Handle("/api/lb/{lb_id}", service.Handler{Config: config, F: LBRetrieveHandler}).Methods("GET")
+	mux.Handle("/api/lb/{lb_id}", service.Handler{Config: config, F: LBDeleteHandler}).Methods("DELETE")
+	mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 
 	return a, nil
 }

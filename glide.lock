@@ -1,5 +1,5 @@
-hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-29T11:53:48.92992752-05:00
+hash: 0db898cc4cd60fbc25230f980a110bf93f7c9f274f3234fff41bfeb1e1b19216
+updated: 2016-01-02T15:03:41.678125181-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -18,7 +18,7 @@ imports:
 - name: github.com/bradfitz/http2
   version: 3e36af6d3af0e56fa3da71099f864933dea3d9fb
 - name: github.com/BurntSushi/toml
-  version: 056c9bc7be7190eaa7715723883caffa5f8fa3e4
+  version: 5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e
 - name: github.com/cheggaaa/pb
   version: da1f27ad1d9509b16f65f52fd9d8138b0f2dc7b2
 - name: github.com/codegangsta/cli
@@ -26,7 +26,7 @@ imports:
 - name: github.com/codegangsta/negroni
   version: c7477ad8e330bef55bf1ebe300cf8aa67c492d1b
 - name: github.com/coreos/etcd
-  version: f1761798e9a25a5ce466305862c68ad0ceb877ae
+  version: 41771d9522f001edcc747d3313deac2a3f20aedc
 - name: github.com/coreos/go-etcd
   version: 003851be7bb0694fe3cc457a49529a19388ee7cf
 - name: github.com/coreos/go-semver
@@ -54,7 +54,7 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: d512f204a577a4ab037a1816604c48c9c13210be
 - name: github.com/gocql/gocql
-  version: 4e6e2f58992fd43cc61e16faf0e58e179480857a
+  version: 0b7f4f639ab52b6b4fe86f46687455b7b8644963
 - name: github.com/godbus/dbus
   version: a1b8ba5163b7f041b22761461eabd02b70d1f824
 - name: github.com/gogo/protobuf
@@ -74,7 +74,7 @@ imports:
 - name: github.com/gorilla/context
   version: 1c83b3eabd45b6d76072b66b746c20815fb2872d
 - name: github.com/gorilla/mux
-  version: 2aad27d3101b8183f8fa1bebdbc2cdb74fcef090
+  version: 26a6070f849969ba72b72256e9f14cf519751690
 - name: github.com/hailocab/go-hostpool
   version: 50839ee41f32bfca8d03a183031aa634b2dc1c64
 - name: github.com/hashicorp/hcl
@@ -116,7 +116,7 @@ imports:
 - name: github.com/mattn/go-isatty
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
 - name: github.com/mattn/go-sqlite3
-  version: 5651a9d9d49ec25811d08220ee972080378d52ea
+  version: 5510da399572b4962c020184bb291120c0a412e2
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -159,11 +159,11 @@ imports:
 - name: github.com/spf13/cobra
   version: 1c44ec8d3f1552cac48999f9306da23c4d8a288b
 - name: github.com/spf13/jwalterweatherman
-  version: c2aa07df593850a04644d77bb757d002e517a296
+  version: d00654080cddbd2b082acaa74007cb94a2b40866
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/spf13/viper
-  version: 110492b3001269a0777997fcbe68a60828fac4cb
+  version: 0c82789feb03da74b3390a5d64b8ce2ce9ba0f3e
 - name: github.com/stretchr/graceful
   version: 48afeb21e2fcbcff0f30bd5ad6b97747b0fae38e
 - name: github.com/stretchr/objx
@@ -204,7 +204,7 @@ imports:
 - name: golang.org/x/text
   version: cf4986612c83df6c55578ba198316d1684a9a287
 - name: golang.org/x/tools
-  version: 157f8abbbd7c19e90432c72cb6216cf0b9324c55
+  version: 2dff1e88eb92a374a989dd38e3402481f498ffa2
 - name: google.golang.org/api
   version: dc6d2353af16e2a2b0ff6986af051d473a4ed468
 - name: google.golang.org/appengine
