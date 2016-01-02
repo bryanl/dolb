@@ -6,12 +6,21 @@ import (
 	"strings"
 )
 
-type FirewallKVS struct {
+type Firewall interface {
+	Init() error
+	Ports() ([]FirewallPort, error)
+	EnablePort(port int) error
+	DisablePort(port int) error
+}
+
+type LiveFirewall struct {
 	KVS
 }
 
-func NewFirewallKVS(backend KVS) *FirewallKVS {
-	return &FirewallKVS{
+var _ Firewall = &LiveFirewall{}
+
+func NewLiveFirewall(backend KVS) *LiveFirewall {
+	return &LiveFirewall{
 		KVS: backend,
 	}
 }
@@ -21,24 +30,24 @@ type FirewallPort struct {
 	Enabled bool
 }
 
-func (fkvs *FirewallKVS) Init() error {
-	err := fkvs.Mkdir("/firewall/ports")
+func (f *LiveFirewall) Init() error {
+	err := f.Mkdir("/firewall/ports")
 	if err != nil {
 		return err
 	}
 
-	_, err = fkvs.Set("/firewall/ports/8889", "enabled", nil)
+	_, err = f.Set("/firewall/ports/8889", "enabled", nil)
 	return err
 }
 
-func (fkvs *FirewallKVS) Ports() ([]FirewallPort, error) {
+func (f *LiveFirewall) Ports() ([]FirewallPort, error) {
 	ports := []FirewallPort{}
 
 	opts := &GetOptions{
 		Recursive: true,
 	}
 
-	node, err := fkvs.Get("/firewall/ports", opts)
+	node, err := f.Get("/firewall/ports", opts)
 	if err != nil {
 		return nil, err
 	}
@@ -60,14 +69,14 @@ func (fkvs *FirewallKVS) Ports() ([]FirewallPort, error) {
 	return ports, nil
 }
 
-func (fkvs *FirewallKVS) EnablePort(port int) error {
+func (f *LiveFirewall) EnablePort(port int) error {
 	key := fmt.Sprintf("/firewall/ports/%d", port)
-	_, err := fkvs.Set(key, "enabled", nil)
+	_, err := f.Set(key, "enabled", nil)
 	return err
 }
 
-func (fkvs *FirewallKVS) DisablePort(port int) error {
+func (f *LiveFirewall) DisablePort(port int) error {
 	key := fmt.Sprintf("/firewall/ports/%d", port)
-	_, err := fkvs.Set(key, "disabled", nil)
+	_, err := f.Set(key, "disabled", nil)
 	return err
 }

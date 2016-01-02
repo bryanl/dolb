@@ -21,16 +21,18 @@ type ServiceManager interface {
 type ServiceManagerFactory func(c *Config) ServiceManager
 
 type EtcdServiceManager struct {
-	Haproxy kvs.Haproxy
-	Log     *logrus.Entry
+	Haproxy  kvs.Haproxy
+	Firewall kvs.Firewall
+	Log      *logrus.Entry
 }
 
 var _ ServiceManager = &EtcdServiceManager{}
 
 func NewEtcdServiceManager(c *Config) ServiceManager {
 	return &EtcdServiceManager{
-		Haproxy: kvs.NewLiveHaproxy(c.KVS, c.IDGen, c.GetLogger()),
-		Log:     c.GetLogger(),
+		Haproxy:  kvs.NewLiveHaproxy(c.KVS, c.IDGen, c.GetLogger()),
+		Firewall: kvs.NewLiveFirewall(c.KVS),
+		Log:      c.GetLogger(),
 	}
 }
 
@@ -50,16 +52,41 @@ func (esm *EtcdServiceManager) Create(er service.ServiceCreateRequest) error {
 			"domain":       er.Domain,
 			"service-name": er.Name,
 			"port":         er.Port,
-		}).Info("createing domain service")
-		return esm.Haproxy.Domain(er.Name, er.Domain, er.Port)
+		}).Info("creating domain service")
+		err := esm.Haproxy.Domain(er.Name, er.Domain, er.Port)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"domain":       er.Domain,
+				"service-name": er.Name,
+				"port":         er.Port,
+			}).WithError(err).Error("could not create domain service")
+			return err
+		}
+	} else if er.Regex != "" {
+		log.WithFields(logrus.Fields{
+			"regex":        er.Regex,
+			"service-name": er.Name,
+			"port":         er.Port,
+		}).Info("creating regex service")
+		err := esm.Haproxy.URLReg(er.Name, er.Regex, er.Port)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"regex":        er.Regex,
+				"service-name": er.Name,
+				"port":         er.Port,
+			}).Info("creating regex service")
+		}
+		return err
 	}
 
-	log.WithFields(logrus.Fields{
-		"regex":        er.Regex,
-		"service-name": er.Name,
-		"port":         er.Port,
-	}).Info("creating regex service")
-	return esm.Haproxy.URLReg(er.Name, er.Regex, er.Port)
+	err := esm.Firewall.EnablePort(er.Port)
+	if err != nil {
+		log.WithError(err).WithField("port", er.Port).Error("unable to open firewall port")
+		return err
+	}
+	log.WithField("port", er.Port).Info("opened firewall port")
+
+	return nil
 }
 
 func (esm *EtcdServiceManager) Services() ([]kvs.Service, error) {

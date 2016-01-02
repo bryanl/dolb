@@ -124,7 +124,7 @@ func (a *Agent) PollClusterStatus() {
 func (a *Agent) PollFirewall() {
 	log := a.Config.logger
 	fw := a.Config.Firewall
-	fkvs := kvs.NewFirewallKVS(a.Config.KVS)
+	fkvs := kvs.NewLiveFirewall(a.Config.KVS)
 
 	err := fkvs.Init()
 	if err != nil {

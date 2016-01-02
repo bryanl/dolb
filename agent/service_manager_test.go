@@ -18,15 +18,18 @@ var _ = Describe("EtcdServiceManager", func() {
 		serviceManager *EtcdServiceManager
 		log            = logrus.WithFields(logrus.Fields{})
 		haproxy        *kvs.MockHaproxy
+		firewall       *kvs.MockFirewall
 		err            error
 	)
 
 	BeforeEach(func() {
 		logrus.SetOutput(ioutil.Discard)
+		firewall = &kvs.MockFirewall{}
 		haproxy = &kvs.MockHaproxy{}
 		serviceManager = &EtcdServiceManager{
-			Haproxy: haproxy,
-			Log:     log,
+			Firewall: firewall,
+			Haproxy:  haproxy,
+			Log:      log,
 		}
 	})
 
@@ -53,6 +56,7 @@ var _ = Describe("EtcdServiceManager", func() {
 					Port:   80,
 				}
 				haproxy.On("Domain", "service-a", "example.com", 80).Return(nil)
+				firewall.On("EnablePort", 80).Return(nil)
 			})
 
 			It("doesn't return an error", func() {
@@ -70,6 +74,7 @@ var _ = Describe("EtcdServiceManager", func() {
 					Port:  80,
 				}
 				haproxy.On("URLReg", "service-a", ".*", 80).Return(nil)
+				firewall.On("EnablePort", 80).Return(nil)
 			})
 
 			It("returns an error", func() {
