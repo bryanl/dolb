@@ -121,35 +121,33 @@ func (h *LiveHaproxy) Init() error {
 
 // Domain creates an endpoint based on a domain name.
 func (h *LiveHaproxy) Domain(app, domain string, port int) error {
-	key := h.serviceKey(app, "/domain")
-	_, err := h.Set(key, domain, nil)
-	if err != nil {
-		return err
-	}
-
-	key = h.serviceKey(app, "/type")
-	_, err = h.Set(key, "domain", nil)
-	if err != nil {
-		return err
-	}
-
-	i := strconv.Itoa(port)
-	key = h.serviceKey(app, "/port")
-	_, err = h.Set(key, i, nil)
-
-	return err
+	return h.addService("domain", app, domain, port)
 }
 
 // URLReg creates an endpoint based on a regular expression.
 func (h *LiveHaproxy) URLReg(app, reg string, port int) error {
-	key := h.serviceKey(app, "/url_reg")
-	_, err := h.Set(key, reg, nil)
+	return h.addService("url_reg", app, reg, port)
+}
+
+func (h *LiveHaproxy) addService(sType, app, opt string, port int) error {
+	svcs, err := h.Services()
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcs {
+		if svc.Port() == port {
+			return fmt.Errorf("port %d is already in used by %s", svc.Port(), svc.Name())
+		}
+	}
+
+	key := h.serviceKey(app, "/%s", sType)
+	_, err = h.Set(key, opt, nil)
 	if err != nil {
 		return err
 	}
 
 	key = h.serviceKey(app, "/type")
-	_, err = h.Set(key, "url_reg", nil)
+	_, err = h.Set(key, sType, nil)
 	if err != nil {
 		return err
 	}
@@ -211,6 +209,12 @@ func (h *LiveHaproxy) Service(name string) (Service, error) {
 	}).Info("retrieving service")
 	s := NewHTTPService(name)
 
+	port, err := h.servicePort(name)
+	if err != nil {
+		return nil, err
+	}
+	s.port = port
+
 	upstreams, err := h.findUpstreams(name)
 	if err != nil {
 		return nil, err
@@ -235,6 +239,21 @@ func (h *LiveHaproxy) Service(name string) (Service, error) {
 
 	return s, nil
 
+}
+
+func (h *LiveHaproxy) servicePort(name string) (int, error) {
+	key := h.serviceKey(name, "/port")
+	node, err := h.Get(key, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	port, err := strconv.Atoi(node.Value)
+	if err != nil {
+		return 0, err
+	}
+
+	return port, nil
 }
 
 func (h *LiveHaproxy) serviceType(name string) (string, error) {

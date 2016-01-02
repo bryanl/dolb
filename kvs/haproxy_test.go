@@ -68,10 +68,47 @@ var _ = Describe("Haproxy", func() {
 				kvs.On("Set", "/haproxy-discover/services/app/domain", "example.com", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/type", "domain", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/port", "80", opts).Return(node, nil)
+
+				emptyNode := &Node{Nodes: Nodes{}}
+				var getOpts *GetOptions
+				kvs.On("Get", "/haproxy-discover/services", getOpts).Return(emptyNode, nil)
 			})
 
 			It("doesn't return an error", func() {
 				Ω(err).ToNot(HaveOccurred())
+			})
+		})
+
+		Context("with port conflict", func() {
+			BeforeEach(func() {
+				node := &Node{
+					Nodes: Nodes{
+						{Key: haproxy.RootKey + "/services/service-a"},
+					},
+				}
+				var getOpts *GetOptions
+				kvs.On("Get", "/haproxy-discover/services", getOpts).Return(node, nil)
+
+				upstreamKey := "/haproxy-discover/services/service-a/upstreams"
+				node6 := &Node{
+					Nodes: Nodes{
+						{Key: upstreamKey + "/a", Value: "host-a:80"},
+					},
+				}
+				kvs.On("Get", upstreamKey, getOpts).Return(node6, nil)
+
+				node2 := &Node{Value: "domain"}
+				kvs.On("Get", "/haproxy-discover/services/service-a/type", getOpts).Return(node2, nil)
+
+				node4 := &Node{Value: "example.com"}
+				kvs.On("Get", "/haproxy-discover/services/service-a/domain", getOpts).Return(node4, nil)
+
+				node8 := &Node{Value: "80"}
+				kvs.On("Get", "/haproxy-discover/services/service-a/port", getOpts).Return(node8, nil)
+			})
+
+			It("returns an error", func() {
+				Ω(err).To(HaveOccurred())
 			})
 
 		})
@@ -91,6 +128,10 @@ var _ = Describe("Haproxy", func() {
 				kvs.On("Set", "/haproxy-discover/services/app/url_reg", ".*", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/type", "url_reg", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/port", "80", opts).Return(node, nil)
+
+				emptyNode := &Node{Nodes: Nodes{}}
+				var getOpts *GetOptions
+				kvs.On("Get", "/haproxy-discover/services", getOpts).Return(emptyNode, nil)
 			})
 
 			It("doesn't return an error", func() {
@@ -143,8 +184,8 @@ var _ = Describe("Haproxy", func() {
 				}
 				kvs.On("Get", "/haproxy-discover/services", opts).Return(node, nil)
 
-				node2 := &Node{Value: "domain"}
-				kvs.On("Get", "/haproxy-discover/services/service-a/type", opts).Return(node2, nil)
+				domainANode := &Node{Value: "domain"}
+				kvs.On("Get", "/haproxy-discover/services/service-a/type", opts).Return(domainANode, nil)
 
 				node3 := &Node{Value: "url_reg"}
 				kvs.On("Get", "/haproxy-discover/services/service-b/type", opts).Return(node3, nil)
@@ -164,6 +205,9 @@ var _ = Describe("Haproxy", func() {
 				}
 				kvs.On("Get", "/haproxy-discover/services/service-a/upstreams", opts).Return(node6, nil)
 
+				portANode := &Node{Value: "80"}
+				kvs.On("Get", "/haproxy-discover/services/service-a/port", opts).Return(portANode, nil)
+
 				kb := "/haproxy-discover/services/service-b/upstreams"
 				node7 := &Node{
 					Nodes: Nodes{
@@ -173,6 +217,9 @@ var _ = Describe("Haproxy", func() {
 					},
 				}
 				kvs.On("Get", "/haproxy-discover/services/service-b/upstreams", opts).Return(node7, nil)
+
+				portBNode := &Node{Value: "81"}
+				kvs.On("Get", "/haproxy-discover/services/service-b/port", opts).Return(portBNode, nil)
 
 			})
 
