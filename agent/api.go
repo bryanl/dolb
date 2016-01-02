@@ -76,6 +76,7 @@ func NewAPI(config *Config) *API {
 func convertServiceToResponse(s kvs.Service) service.ServiceResponse {
 	sr := service.ServiceResponse{
 		Name:      s.Name(),
+		Port:      s.Port(),
 		Type:      s.Type(),
 		Config:    map[string]interface{}{},
 		Upstreams: []service.UpstreamResponse{},

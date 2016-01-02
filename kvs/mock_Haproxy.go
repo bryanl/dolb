@@ -30,12 +30,12 @@ func (_m *MockHaproxy) DeleteUpstream(svcName string, id string) error {
 
 	return r0
 }
-func (_m *MockHaproxy) Domain(svcName string, domain string) error {
-	ret := _m.Called(svcName, domain)
+func (_m *MockHaproxy) Domain(svcName string, domain string, port int) error {
+	ret := _m.Called(svcName, domain, port)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(svcName, domain)
+	if rf, ok := ret.Get(0).(func(string, string, int) error); ok {
+		r0 = rf(svcName, domain, port)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -94,12 +94,12 @@ func (_m *MockHaproxy) Services() ([]Service, error) {
 
 	return r0, r1
 }
-func (_m *MockHaproxy) URLReg(svcName string, regex string) error {
-	ret := _m.Called(svcName, regex)
+func (_m *MockHaproxy) URLReg(svcName string, regex string, port int) error {
+	ret := _m.Called(svcName, regex, port)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(svcName, regex)
+	if rf, ok := ret.Get(0).(func(string, string, int) error); ok {
+		r0 = rf(svcName, regex, port)
 	} else {
 		r0 = ret.Error(0)
 	}

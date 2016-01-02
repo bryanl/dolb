@@ -18,6 +18,18 @@ func (_m *MockService) Name() string {
 
 	return r0
 }
+func (_m *MockService) Port() int {
+	ret := _m.Called()
+
+	var r0 int
+	if rf, ok := ret.Get(0).(func() int); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	return r0
+}
 func (_m *MockService) Type() string {
 	ret := _m.Called()
 

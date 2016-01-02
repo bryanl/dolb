@@ -50,8 +50,9 @@ var _ = Describe("EtcdServiceManager", func() {
 				scr = service.ServiceCreateRequest{
 					Name:   "service-a",
 					Domain: "example.com",
+					Port:   80,
 				}
-				haproxy.On("Domain", "service-a", "example.com").Return(nil)
+				haproxy.On("Domain", "service-a", "example.com", 80).Return(nil)
 			})
 
 			It("doesn't return an error", func() {
@@ -66,8 +67,9 @@ var _ = Describe("EtcdServiceManager", func() {
 				scr = service.ServiceCreateRequest{
 					Name:  "service-a",
 					Regex: ".*",
+					Port:  80,
 				}
-				haproxy.On("URLReg", "service-a", ".*").Return(nil)
+				haproxy.On("URLReg", "service-a", ".*", 80).Return(nil)
 			})
 
 			It("returns an error", func() {

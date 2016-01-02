@@ -57,7 +57,7 @@ var _ = Describe("Haproxy", func() {
 	Describe("Domain", func() {
 
 		JustBeforeEach(func() {
-			err = haproxy.Domain("app", "example.com")
+			err = haproxy.Domain("app", "example.com", 80)
 		})
 
 		Context("with valid inputs", func() {
@@ -67,6 +67,7 @@ var _ = Describe("Haproxy", func() {
 				node := &Node{}
 				kvs.On("Set", "/haproxy-discover/services/app/domain", "example.com", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/type", "domain", opts).Return(node, nil)
+				kvs.On("Set", "/haproxy-discover/services/app/port", "80", opts).Return(node, nil)
 			})
 
 			It("doesn't return an error", func() {
@@ -79,7 +80,7 @@ var _ = Describe("Haproxy", func() {
 	Describe("URLReg", func() {
 
 		JustBeforeEach(func() {
-			err = haproxy.URLReg("app", ".*")
+			err = haproxy.URLReg("app", ".*", 80)
 		})
 
 		Context("with valid inputs", func() {
@@ -89,6 +90,7 @@ var _ = Describe("Haproxy", func() {
 				node := &Node{}
 				kvs.On("Set", "/haproxy-discover/services/app/url_reg", ".*", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/type", "url_reg", opts).Return(node, nil)
+				kvs.On("Set", "/haproxy-discover/services/app/port", "80", opts).Return(node, nil)
 			})
 
 			It("doesn't return an error", func() {

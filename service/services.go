@@ -3,6 +3,7 @@ package service
 // ServiceCreateRequest is a request to create a service.
 type ServiceCreateRequest struct {
 	Name   string `json:"service_name"`
+	Port   int    `json:"port"`
 	Domain string `json:"domain"`
 	Regex  string `json:"url_regex"`
 }
@@ -14,8 +15,9 @@ type ServicesResponse struct {
 
 // ServiceResponse is a service response sent to a client.
 type ServiceResponse struct {
-	Name      string                 `json:"service_name"`
-	Type      string                 `json:"service_type"`
+	Name      string                 `json:"name"`
+	Port      int                    `json:"port"`
+	Type      string                 `json:"type"`
 	Config    map[string]interface{} `json:"config"`
 	Upstreams []UpstreamResponse     `json:"upstreams"`
 }

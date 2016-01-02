@@ -49,15 +49,17 @@ func (esm *EtcdServiceManager) Create(er service.ServiceCreateRequest) error {
 		log.WithFields(logrus.Fields{
 			"domain":       er.Domain,
 			"service-name": er.Name,
+			"port":         er.Port,
 		}).Info("createing domain service")
-		return esm.Haproxy.Domain(er.Name, er.Domain)
+		return esm.Haproxy.Domain(er.Name, er.Domain, er.Port)
 	}
 
 	log.WithFields(logrus.Fields{
 		"regex":        er.Regex,
 		"service-name": er.Name,
+		"port":         er.Port,
 	}).Info("creating regex service")
-	return esm.Haproxy.URLReg(er.Name, er.Regex)
+	return esm.Haproxy.URLReg(er.Name, er.Regex, er.Port)
 }
 
 func (esm *EtcdServiceManager) Services() ([]kvs.Service, error) {

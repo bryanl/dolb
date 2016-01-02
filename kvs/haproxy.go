@@ -16,6 +16,7 @@ const (
 
 type Service interface {
 	Name() string
+	Port() int
 	Type() string
 	Upstreams() []Upstream
 	ServiceConfig() ServiceConfig
@@ -31,6 +32,7 @@ type Upstream struct {
 
 type HTTPService struct {
 	n             string
+	port          int
 	serviceConfig ServiceConfig
 	upstreams     []Upstream
 }
@@ -47,6 +49,10 @@ func NewHTTPService(n string) *HTTPService {
 
 func (hs *HTTPService) Name() string {
 	return hs.n
+}
+
+func (hs *HTTPService) Port() int {
+	return hs.port
 }
 
 func (hs *HTTPService) Type() string {
@@ -70,11 +76,11 @@ type IDGenFN func() string
 type Haproxy interface {
 	DeleteService(name string) error
 	DeleteUpstream(svcName, id string) error
-	Domain(svcName, domain string) error
+	Domain(svcName, domain string, port int) error
 	Init() error
 	Service(name string) (Service, error)
 	Services() ([]Service, error)
-	URLReg(svcName, regex string) error
+	URLReg(svcName, regex string, port int) error
 	Upstream(svcName, address string) error
 }
 
@@ -114,7 +120,7 @@ func (h *LiveHaproxy) Init() error {
 }
 
 // Domain creates an endpoint based on a domain name.
-func (h *LiveHaproxy) Domain(app, domain string) error {
+func (h *LiveHaproxy) Domain(app, domain string, port int) error {
 	key := h.serviceKey(app, "/domain")
 	_, err := h.Set(key, domain, nil)
 	if err != nil {
@@ -123,12 +129,19 @@ func (h *LiveHaproxy) Domain(app, domain string) error {
 
 	key = h.serviceKey(app, "/type")
 	_, err = h.Set(key, "domain", nil)
+	if err != nil {
+		return err
+	}
+
+	i := strconv.Itoa(port)
+	key = h.serviceKey(app, "/port")
+	_, err = h.Set(key, i, nil)
 
 	return err
 }
 
 // URLReg creates an endpoint based on a regular expression.
-func (h *LiveHaproxy) URLReg(app, reg string) error {
+func (h *LiveHaproxy) URLReg(app, reg string, port int) error {
 	key := h.serviceKey(app, "/url_reg")
 	_, err := h.Set(key, reg, nil)
 	if err != nil {
@@ -137,6 +150,13 @@ func (h *LiveHaproxy) URLReg(app, reg string) error {
 
 	key = h.serviceKey(app, "/type")
 	_, err = h.Set(key, "url_reg", nil)
+	if err != nil {
+		return err
+	}
+
+	i := strconv.Itoa(port)
+	key = h.serviceKey(app, "/port")
+	_, err = h.Set(key, i, nil)
 
 	return err
 }
