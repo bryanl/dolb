@@ -4,7 +4,7 @@ SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
 AGENTBIN=dolb-agent
 
 $(AGENTBIN): $(SOURCES)
-	GOOS=linux GOATCH=amd64 go build -o cmd/dolb-agent/${AGENTBIN} github.com/bryanl/dolb/cmd/dolb-agent
+	GOOS=linux GOARCH=amd64 go build -o cmd/dolb-agent/${AGENTBIN} github.com/bryanl/dolb/cmd/dolb-agent
 
 .PHONY: deploy-agent
 deploy-agent: $(AGENTBIN)
