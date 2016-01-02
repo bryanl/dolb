@@ -79,6 +79,8 @@ func (esm *EtcdServiceManager) Create(er service.ServiceCreateRequest) error {
 		return err
 	}
 
+	// TODO clean me up
+	log.WithField("port", er.Port).Info("opening firewall port")
 	err := esm.Firewall.EnablePort(er.Port)
 	if err != nil {
 		log.WithError(err).WithField("port", er.Port).Error("unable to open firewall port")
