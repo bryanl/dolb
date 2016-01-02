@@ -20,7 +20,7 @@ type ServiceManager interface {
 type ServiceManagerFactory func(c *Config) ServiceManager
 
 type EtcdServiceManager struct {
-	Haproxy *kvs.Haproxy
+	Haproxy kvs.Haproxy
 	Log     *logrus.Entry
 }
 
@@ -28,7 +28,7 @@ var _ ServiceManager = &EtcdServiceManager{}
 
 func NewEtcdServiceManager(c *Config) ServiceManager {
 	return &EtcdServiceManager{
-		Haproxy: kvs.NewHaproxy(c.KVS, c.IDGen, c.GetLogger()),
+		Haproxy: kvs.NewLiveHaproxy(c.KVS, c.IDGen, c.GetLogger()),
 		Log:     c.GetLogger(),
 	}
 }

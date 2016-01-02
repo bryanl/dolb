@@ -9,6 +9,11 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
+const (
+	svcDomain = "domain"
+	svcURLReg = "url_reg"
+)
+
 type Service interface {
 	Name() string
 	Type() string
@@ -62,17 +67,30 @@ func (hs *HTTPService) ServiceConfig() ServiceConfig {
 
 type IDGenFN func() string
 
+type Haproxy interface {
+	DeleteService(name string) error
+	DeleteUpstream(svcName, id string) error
+	Domain(svcName, domain string) error
+	Init() error
+	Service(name string) (Service, error)
+	Services() ([]Service, error)
+	URLReg(svcName, regex string) error
+	Upstream(svcName, address string) error
+}
+
 // HaproxyKVS is a haproxy management kvs.
-type Haproxy struct {
+type LiveHaproxy struct {
 	IDGen IDGenFN
 	KVS
 	RootKey string
 	log     *logrus.Entry
 }
 
+var _ Haproxy = &LiveHaproxy{}
+
 // NewHaproxyKVS builds a HaproxyKVS instance.
-func NewHaproxy(backend KVS, idGen IDGenFN, log *logrus.Entry) *Haproxy {
-	return &Haproxy{
+func NewLiveHaproxy(backend KVS, idGen IDGenFN, log *logrus.Entry) *LiveHaproxy {
+	return &LiveHaproxy{
 		IDGen:   idGen,
 		KVS:     backend,
 		RootKey: "/haproxy-discover",
@@ -81,7 +99,7 @@ func NewHaproxy(backend KVS, idGen IDGenFN, log *logrus.Entry) *Haproxy {
 }
 
 // Init initializes a kvs for haproxy configuration management.
-func (h *Haproxy) Init() error {
+func (h *LiveHaproxy) Init() error {
 	err := h.Mkdir(h.RootKey + "/services")
 	if err != nil {
 		return err
@@ -96,7 +114,7 @@ func (h *Haproxy) Init() error {
 }
 
 // Domain creates an endpoint based on a domain name.
-func (h *Haproxy) Domain(app, domain string) error {
+func (h *LiveHaproxy) Domain(app, domain string) error {
 	key := h.serviceKey(app, "/domain")
 	_, err := h.Set(key, domain, nil)
 	if err != nil {
@@ -110,7 +128,7 @@ func (h *Haproxy) Domain(app, domain string) error {
 }
 
 // URLReg creates an endpoint based on a regular expression.
-func (h *Haproxy) URLReg(app, reg string) error {
+func (h *LiveHaproxy) URLReg(app, reg string) error {
 	key := h.serviceKey(app, "/url_reg")
 	_, err := h.Set(key, reg, nil)
 	if err != nil {
@@ -123,23 +141,29 @@ func (h *Haproxy) URLReg(app, reg string) error {
 	return err
 }
 
+func (h *LiveHaproxy) DeleteService(name string) error {
+	key := h.serviceKey(name, "")
+	err := h.Rmdir(key)
+	return err
+}
+
 // Upstream sets a new upstream node.
-func (h *Haproxy) Upstream(app, address string) error {
+func (h *LiveHaproxy) Upstream(app, address string) error {
 	key := h.serviceKey(app, "/upstreams/%s", h.IDGen())
 	_, err := h.Set(key, address, nil)
 	return err
 }
 
-func (h *Haproxy) DeleteUpstream(app, id string) error {
+func (h *LiveHaproxy) DeleteUpstream(app, id string) error {
 	key := h.serviceKey(app, "/upstreams/%s", id)
 	return h.Delete(key)
 }
 
-func (h *Haproxy) serviceKey(service, format string, a ...interface{}) string {
+func (h *LiveHaproxy) serviceKey(service, format string, a ...interface{}) string {
 	return fmt.Sprintf("%s/services/%s"+format, append([]interface{}{h.RootKey, service}, a...)...)
 }
 
-func (h *Haproxy) Services() ([]Service, error) {
+func (h *LiveHaproxy) Services() ([]Service, error) {
 
 	services := []Service{}
 
@@ -161,7 +185,7 @@ func (h *Haproxy) Services() ([]Service, error) {
 	return services, nil
 }
 
-func (h *Haproxy) Service(name string) (Service, error) {
+func (h *LiveHaproxy) Service(name string) (Service, error) {
 	h.log.WithFields(logrus.Fields{
 		"service-name": name,
 	}).Info("retrieving service")
@@ -193,7 +217,7 @@ func (h *Haproxy) Service(name string) (Service, error) {
 
 }
 
-func (h *Haproxy) serviceType(name string) (string, error) {
+func (h *LiveHaproxy) serviceType(name string) (string, error) {
 	key := h.serviceKey(name, "/type")
 	node, err := h.Get(key, nil)
 	if err != nil {
@@ -203,7 +227,7 @@ func (h *Haproxy) serviceType(name string) (string, error) {
 	return node.Value, nil
 }
 
-func (h *Haproxy) findUpstreams(name string) ([]Upstream, error) {
+func (h *LiveHaproxy) findUpstreams(name string) ([]Upstream, error) {
 	upstreams := []Upstream{}
 
 	key := h.serviceKey(name, "/upstreams")
@@ -238,7 +262,7 @@ func (h *Haproxy) findUpstreams(name string) ([]Upstream, error) {
 	return upstreams, nil
 }
 
-func (h *Haproxy) serviceConfig(name string) (ServiceConfig, error) {
+func (h *LiveHaproxy) serviceConfig(name string) (ServiceConfig, error) {
 	serviceType, err := h.serviceType(name)
 	if err != nil {
 		return nil, err
@@ -253,11 +277,11 @@ func (h *Haproxy) serviceConfig(name string) (ServiceConfig, error) {
 	sc := ServiceConfig{}
 
 	switch serviceType {
-	case "domain":
-		sc["matcher"] = "domain"
+	case svcDomain:
+		sc["matcher"] = svcDomain
 		sc["domain"] = vNode.Value
-	case "url_reg":
-		sc["matcher"] = "url_reg"
+	case svcURLReg:
+		sc["matcher"] = svcURLReg
 		sc["url_reg"] = vNode.Value
 	default:
 		return nil, fmt.Errorf("unknown service type %q", serviceType)

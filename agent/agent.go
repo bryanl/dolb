@@ -104,7 +104,7 @@ func (a *Agent) PollClusterStatus() {
 			}).Info("leader check")
 
 			if cs.IsLeader {
-				hkvs := kvs.NewHaproxy(a.Config.KVS, a.Config.IDGen, a.Config.GetLogger())
+				hkvs := kvs.NewLiveHaproxy(a.Config.KVS, a.Config.IDGen, a.Config.GetLogger())
 
 				err := hkvs.Init()
 				if err != nil {

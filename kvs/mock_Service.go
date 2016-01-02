@@ -44,3 +44,15 @@ func (_m *MockService) Upstreams() []Upstream {
 
 	return r0
 }
+func (_m *MockService) ServiceConfig() ServiceConfig {
+	ret := _m.Called()
+
+	var r0 ServiceConfig
+	if rf, ok := ret.Get(0).(func() ServiceConfig); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(ServiceConfig)
+	}
+
+	return r0
+}

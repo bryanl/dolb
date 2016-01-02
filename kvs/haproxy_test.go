@@ -1,6 +1,7 @@
 package kvs_test
 
 import (
+	"io/ioutil"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -19,14 +20,19 @@ var _ = Describe("Haproxy", func() {
 			return strconv.Itoa(i)
 		}
 		kvs     *MockKVS
-		haproxy *Haproxy
+		haproxy *LiveHaproxy
 		err     error
 		log     = logrus.WithFields(logrus.Fields{})
 	)
 
 	BeforeEach(func() {
+		logrus.SetOutput(ioutil.Discard)
 		kvs = &MockKVS{}
-		haproxy = NewHaproxy(kvs, idGen, log)
+		haproxy = NewLiveHaproxy(kvs, idGen, log)
+	})
+
+	AfterEach(func() {
+		kvs.AssertExpectations(GinkgoT())
 	})
 
 	Describe("Init", func() {
@@ -61,10 +67,6 @@ var _ = Describe("Haproxy", func() {
 				node := &Node{}
 				kvs.On("Set", "/haproxy-discover/services/app/domain", "example.com", opts).Return(node, nil)
 				kvs.On("Set", "/haproxy-discover/services/app/type", "domain", opts).Return(node, nil)
-			})
-
-			AfterEach(func() {
-				kvs.AssertExpectations(GinkgoT())
 			})
 
 			It("doesn't return an error", func() {
@@ -208,11 +210,23 @@ var _ = Describe("Haproxy", func() {
 				kvs.On("Delete", "/haproxy-discover/services/service-a/upstreams/999").Return(nil)
 			})
 
-			AfterEach(func() {
-				kvs.AssertExpectations(GinkgoT())
+			It("doesn't not return an error", func() {
+				Ω(err).ToNot(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("DeleteService", func() {
+		JustBeforeEach(func() {
+			err = haproxy.DeleteService("service-a")
+		})
+
+		Context("with a valid service name", func() {
+			BeforeEach(func() {
+				kvs.On("Rmdir", "/haproxy-discover/services/service-a").Return(nil)
 			})
 
-			It("doesn't not return an error", func() {
+			It("doesn't return an error", func() {
 				Ω(err).ToNot(HaveOccurred())
 			})
 		})
