@@ -40,6 +40,10 @@ func init() {
 		templates[key] = template.New(key)
 
 		files := append(includes, layout)
+		logrus.WithFields(logrus.Fields{
+			"template-name":  key,
+			"template-files": strings.Join(files, ","),
+		}).Info("preloading templates")
 		for _, file := range files {
 			in, err := Asset(file)
 			if err != nil {
@@ -80,10 +84,13 @@ func New(config *server.Config) *Site {
 	router.Handle("/auth/{provider}/callback", oauthCallBack).Methods("GET")
 
 	lbNewHandler := &LBNewHandler{bh: bh}
-	router.Handle("/lb/new", loggingMiddleware(idGen, lbNewHandler)).Methods("GET")
+	router.Handle("/lb/new", lbNewHandler).Methods("GET")
+
+	lbShowHandler := &LBShowHandler{bh: bh}
+	router.Handle("/lb/{lb_id}", lbShowHandler).Methods("GET")
 
 	lbCreateHandler := &LBCreateHandler{bh: bh}
-	router.Handle("/lb", loggingMiddleware(idGen, lbCreateHandler)).Methods("POST")
+	router.Handle("/lb", lbCreateHandler).Methods("POST")
 
 	homeHandler := &HomeHandler{bh: bh}
 	router.Handle("/", loggingMiddleware(idGen, homeHandler)).Methods("GET")
