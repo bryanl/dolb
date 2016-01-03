@@ -2,6 +2,7 @@
 // sources:
 // templates/includes/base.tmpl
 // templates/layouts/home.tmpl
+// templates/layouts/lb_new.tmpl
 // assets/old.html
 // DO NOT EDIT!
 
@@ -51,6 +52,24 @@ func templatesIncludesBaseTmpl() (*asset, error) {
 func templatesLayoutsHomeTmpl() (*asset, error) {
 	path := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/templates/layouts/home.tmpl"
 	name := "templates/layouts/home.tmpl"
+	bytes, err := bindataRead(path, name)
+	if err != nil {
+		return nil, err
+	}
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		err = fmt.Errorf("Error reading asset info %s at %s: %v", name, path, err)
+	}
+
+	a := &asset{bytes: bytes, info: fi}
+	return a, err
+}
+
+// templatesLayoutsLb_newTmpl reads file data from disk. It returns an error on failure.
+func templatesLayoutsLb_newTmpl() (*asset, error) {
+	path := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/templates/layouts/lb_new.tmpl"
+	name := "templates/layouts/lb_new.tmpl"
 	bytes, err := bindataRead(path, name)
 	if err != nil {
 		return nil, err
@@ -137,6 +156,7 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"templates/includes/base.tmpl": templatesIncludesBaseTmpl,
 	"templates/layouts/home.tmpl": templatesLayoutsHomeTmpl,
+	"templates/layouts/lb_new.tmpl": templatesLayoutsLb_newTmpl,
 	"assets/old.html": assetsOldHtml,
 }
 
@@ -189,6 +209,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		}},
 		"layouts": &bintree{nil, map[string]*bintree{
 			"home.tmpl": &bintree{templatesLayoutsHomeTmpl, map[string]*bintree{}},
+			"lb_new.tmpl": &bintree{templatesLayoutsLb_newTmpl, map[string]*bintree{}},
 		}},
 	}},
 }}

@@ -76,13 +76,18 @@ func New(config *Config) *Site {
 	loggingRouter := loggingMiddleware(idGen, router)
 	s := &Site{Mux: loggingRouter}
 
+	bh := &baseHandler{DBSession: config.DBSession}
+
 	// auth
 	router.HandleFunc("/auth/digitalocean", beginGoth).Methods("GET")
 	oauthCallBack := &OauthCallback{DBSession: config.DBSession}
 	router.Handle("/auth/{provider}/callback", oauthCallBack).Methods("GET")
 
-	homeHandler := &HomeHandler{DBSession: config.DBSession}
+	homeHandler := &HomeHandler{bh: bh}
 	router.Handle("/", loggingMiddleware(idGen, homeHandler)).Methods("GET")
+
+	lbNewHandler := &LBNewHandler{bh: bh}
+	router.Handle("/lb/new", loggingMiddleware(idGen, lbNewHandler)).Methods("GET")
 
 	// define this last
 	assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"

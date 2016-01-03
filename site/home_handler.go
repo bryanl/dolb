@@ -5,11 +5,10 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/dao"
 )
 
 type HomeHandler struct {
-	DBSession dao.Session
+	bh *baseHandler
 }
 
 type homeData struct {
@@ -17,26 +16,15 @@ type homeData struct {
 }
 
 func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	session, err := sessionStore.Get(r, "_dolb_session")
-	if err != nil {
-		logrus.WithError(err).Error("unable to load session")
-		w.WriteHeader(500)
-		fmt.Fprint(w, "session is unavailable")
-		return
-	}
-
-	var userID string
-	if id, ok := session.Values["user_id"]; ok {
-		userID = id.(string)
-	}
+	u := h.bh.currentUser(r)
 
 	d := &homeData{
-		UnknownUser: userID == "",
+		UnknownUser: u == nil,
 	}
 
-	err = renderTemplate(w, "home.tmpl", d)
+	err := renderTemplate(w, "home.tmpl", d)
 	if err != nil {
-		logrus.WithError(err).Error("could not render home template")
+		logrus.WithError(err).Error("could not render template")
 		w.WriteHeader(500)
 		fmt.Fprintln(w, err)
 	}

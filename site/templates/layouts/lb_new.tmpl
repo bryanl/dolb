@@ -1,0 +1,50 @@
+{{ define "title" }} DOLB: Create Load Balancer {{ end }}
+
+{{ define "content" }}
+<form class="form-horizontal" action="/lb">
+<fieldset>
+
+<legend>Create Load Balancer</legend>
+
+<!-- Text input-->
+<div class="form-group">
+  <label class="col-md-4 control-label" for="textinput">Name</label>  
+  <div class="col-md-4">
+  <input id="textinput" name="textinput" type="text" placeholder="app" class="form-control input-md">
+  <span class="help-block">Load Balancer name</span>  
+  </div>
+</div>
+
+<!-- Select Basic -->
+<div class="form-group">
+  <label class="col-md-4 control-label" for="selectbasic">Region</label>
+  <div class="col-md-4">
+    <select id="selectbasic" name="selectbasic" class="form-control">
+      <option value="nyc1">nyc1</option>
+      <option value="ams1">ams1</option>
+      <option value="sfo1">sfo1</option>
+      <option value="ams2">ams2</option>
+      <option value="sgp1">sgp1</option>
+      <option value="lon1">lon1</option>
+      <option value="nyc3">nyc3</option>
+      <option value="ams3">ams3</option>
+      <option value="fra1">fra1</option>
+      <option value="tor1">tor1</option>
+    </select>
+  </div>
+</div>
+
+<!-- Text input-->
+<div class="form-group">
+  <label class="col-md-4 control-label" for="textinput">SSH Keys</label>  
+  <div class="col-md-4">
+  <input id="textinput" name="textinput" type="text" placeholder="97313" class="form-control input-md">
+  <span class="help-block">comma separated ids</span>  
+  </div>
+</div>
+
+<button type="submit" class="btn btn-default">Create Load Balancer</button>
+
+</fieldset>
+</form>
+{{ end }}
