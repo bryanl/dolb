@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	PingPath = "/ping"
+	PingPath = "/api/ping"
 )
 
 // HandlerFunc is a handler function that returns a Response.
