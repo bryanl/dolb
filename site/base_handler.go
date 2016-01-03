@@ -5,10 +5,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/server"
 )
 
 type baseHandler struct {
-	DBSession dao.Session
+	config *server.Config
 }
 
 func (bh *baseHandler) currentUser(r *http.Request) *dao.User {
@@ -19,12 +20,11 @@ func (bh *baseHandler) currentUser(r *http.Request) *dao.User {
 	}
 
 	if userID, ok := session.Values["user_id"]; ok {
-		u, err := bh.DBSession.FindUser(userID.(string))
+		u, err := bh.config.DBSession.FindUser(userID.(string))
 		if err != nil {
 			return nil
 		}
 		return u
 	}
 	return nil
-
 }

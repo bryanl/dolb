@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/service"
 )
 
@@ -25,18 +26,30 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
 	}
 
+	lb, err := CreateLoadBalancer(bc, config)
+	if err != nil {
+		return service.Response{Body: err, Status: 400}
+	}
+
+	bcResp := BootstrapClusterResponse{
+		LoadBalancer: NewLoadBalancerFromDAO(*lb),
+	}
+
+	return service.Response{Body: bcResp, Status: http.StatusCreated}
+}
+
+func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, error) {
 	if bc.DigitalOceanToken == "" {
-		return service.Response{Body: "digitalocean_token is required", Status: 400}
+		return nil, fmt.Errorf("DigitalOcean token is required")
 	}
 
 	lb := config.DBSession.NewLoadBalancer()
 	lb.Name = bc.Name
 	lb.Region = bc.Region
 	lb.DigitaloceanAccessToken = bc.DigitalOceanToken
-	err = lb.Save()
+	err := lb.Save()
 	if err != nil {
-		config.logger.WithError(err).Error("could not save load balancer")
-		return service.Response{Body: err, Status: 400}
+		return nil, err
 	}
 
 	co := config.ClusterOpsFactory()
@@ -48,18 +61,14 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 
 	err = co.Bootstrap(bo)
 	if err != nil {
-		config.logger.WithError(err).Error("could not bootstrap cluster")
-		return service.Response{Body: err, Status: 400}
+		config.GetLogger().WithError(err).Error("could not bootstrap cluster")
+		return nil, err
 	}
 
-	config.logger.WithFields(logrus.Fields{
+	config.GetLogger().WithFields(logrus.Fields{
 		"cluster-name":   bc.Name,
 		"cluster-region": bc.Region,
 	}).Info("created load balancer")
 
-	bcResp := BootstrapClusterResponse{
-		LoadBalancer: NewLoadBalancerFromDAO(*lb),
-	}
-
-	return service.Response{Body: bcResp, Status: http.StatusCreated}
+	return lb, nil
 }

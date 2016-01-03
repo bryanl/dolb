@@ -34,6 +34,7 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 			client := do.GodoClientFactory(token)
 			return do.NewLiveDigitalOcean(client, config.BaseDomain)
 		},
+		logger: logrus.WithFields(logrus.Fields{}),
 	}
 }
 

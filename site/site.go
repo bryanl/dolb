@@ -11,6 +11,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/server"
 	"github.com/gorilla/mux"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
@@ -52,17 +53,12 @@ func init() {
 	}
 }
 
-type Config struct {
-	DBSession dao.Session
-	IDGen     func() string
-}
-
 type Site struct {
 	Mux   http.Handler
 	IDGen func() string
 }
 
-func New(config *Config) *Site {
+func New(config *server.Config) *Site {
 
 	clientID := "ed07f403db0397d43d4d026275203d03a4a2de2b24bf8ca2d7b6fff8987ddd5e"
 	clientSecret := "ad20064ec058d771cd61b5c15f58b8a06cf6af072a9b5d6f63e812c82b7c6518"
@@ -76,18 +72,21 @@ func New(config *Config) *Site {
 	loggingRouter := loggingMiddleware(idGen, router)
 	s := &Site{Mux: loggingRouter}
 
-	bh := &baseHandler{DBSession: config.DBSession}
+	bh := &baseHandler{config: config}
 
 	// auth
 	router.HandleFunc("/auth/digitalocean", beginGoth).Methods("GET")
 	oauthCallBack := &OauthCallback{DBSession: config.DBSession}
 	router.Handle("/auth/{provider}/callback", oauthCallBack).Methods("GET")
 
-	homeHandler := &HomeHandler{bh: bh}
-	router.Handle("/", loggingMiddleware(idGen, homeHandler)).Methods("GET")
-
 	lbNewHandler := &LBNewHandler{bh: bh}
 	router.Handle("/lb/new", loggingMiddleware(idGen, lbNewHandler)).Methods("GET")
+
+	lbCreateHandler := &LBCreateHandler{bh: bh}
+	router.Handle("/lb", loggingMiddleware(idGen, lbCreateHandler)).Methods("POST")
+
+	homeHandler := &HomeHandler{bh: bh}
+	router.Handle("/", loggingMiddleware(idGen, homeHandler)).Methods("GET")
 
 	// define this last
 	assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"
