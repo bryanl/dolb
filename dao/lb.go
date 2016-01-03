@@ -18,6 +18,9 @@ type Session interface {
 	LoadBalancerAgents(id string) ([]Agent, error)
 	NewAgent() *Agent
 	NewLoadBalancer() *LoadBalancer
+
+	FindUser(id string) (*User, error)
+	NewUser() *User
 }
 
 // NewSession builds an instance of PgSession.
@@ -161,4 +164,19 @@ func (ps *PgSession) NewAgent() *Agent {
 
 func (ps *PgSession) NewLoadBalancer() *LoadBalancer {
 	return NewLoadBalancer(ps.db, ps.ModelConfig)
+}
+
+func (ps *PgSession) NewUser() *User {
+	return NewUser(ps.db, ps.ModelConfig)
+}
+
+func (ps *PgSession) FindUser(id string) (*User, error) {
+	u := NewUser(ps.db, ps.ModelConfig)
+	u.ID = id
+	err := u.rec.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
 }

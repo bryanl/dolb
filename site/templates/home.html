@@ -11,12 +11,23 @@
 
   <body>
     <div class="container">
-      <h1>DOLB (template)</h1>
+      <h1>DOLB</h1>
 
       <div class="row">
+
+        {{ if .UnknownUser }}
         <div class="col-md-12">
           <a href="/auth/digitalocean">Log in with DigitalOcean</a>
         </div>
+        {{ end }}
+
+
+        {{ if not .UnknownUser }}
+        <div class="col-md-12">
+          <p> yay we are logged in </p>
+        </div>
+        {{ end }}
+
       </div>
 
     </div>

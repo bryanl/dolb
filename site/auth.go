@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/bryanl/dolb/vendor/github.com/markbates/goth/gothic"
+	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dao"
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 )
 
 var (
-	sessionName = "_gothic_session"
-	store       = sessions.NewCookieStore([]byte("secret"))
+	sessionName  = "_gothic_session"
+	sessionStore = sessions.NewCookieStore([]byte("secret"))
 )
 
 func beginGoth(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +28,11 @@ func beginGoth(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func gothCallback(w http.ResponseWriter, r *http.Request) {
+type OauthCallback struct {
+	DBSession dao.Session
+}
+
+func (oc *OauthCallback) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("State: ", gothic.GetState(r))
 
 	user, err := gothic.CompleteUserAuth(w, r)
@@ -35,9 +41,38 @@ func gothCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// FIXME save or update user here
+	u, err := oc.DBSession.FindUser(user.UserID)
+	if err != nil {
+		// NOTE user didn't exist in DB most likely
+		u = oc.DBSession.NewUser()
+		u.ID = user.UserID
+		u.Email = user.Email
+	}
 
-	fmt.Printf("found user: %#v\n", user)
+	u.AccessToken = user.AccessToken
+
+	session, err := sessionStore.Get(r, "_dolb_session")
+	if err != nil {
+		logrus.WithError(err).Error("unable to load session")
+		w.WriteHeader(500)
+		fmt.Fprint(w, "session is unavailable")
+		return
+	}
+
+	err = u.Save()
+	if err != nil {
+		logrus.WithError(err).Error("unable to save user")
+		session.AddFlash("Unable to save user")
+	}
+
+	session.Values["user_id"] = u.ID
+
+	err = session.Save(r, w)
+	if err != nil {
+		logrus.WithError(err).Error("unable to save session")
+	}
+
+	http.Redirect(w, r, "/", 302)
 }
 
 func getAuthURL(w http.ResponseWriter, r *http.Request) (string, error) {
@@ -55,7 +90,7 @@ func getAuthURL(w http.ResponseWriter, r *http.Request) (string, error) {
 		return "", err
 	}
 
-	session, err := store.Get(r, sessionName)
+	session, err := sessionStore.Get(r, sessionName)
 	if err != nil {
 		return "", err
 	}
@@ -78,7 +113,7 @@ func completeUserAuth(res http.ResponseWriter, req *http.Request) (goth.User, er
 		return goth.User{}, err
 	}
 
-	session, err := store.Get(req, sessionName)
+	session, err := sessionStore.Get(req, sessionName)
 	if err != nil {
 		return goth.User{}, err
 	}

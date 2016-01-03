@@ -111,3 +111,35 @@ func (a *Agent) Delete() error {
 	a.IsDeleted = true
 	return a.Save()
 }
+
+type User struct {
+	tableName string `tablename:"users"`
+	rec       structable.Recorder
+	builder   squirrel.StatementBuilderType
+	mc        *ModelConfig
+
+	ID          string `stbl:"id,PRIMARY_KEY"`
+	AccessToken string `stbl:"access_token"`
+	Email       string `stbl:"email"`
+}
+
+func NewUser(db squirrel.DBProxyBeginner, mc *ModelConfig) *User {
+	o := new(User)
+	o.mc = mc
+
+	o.builder = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).RunWith(db)
+	o.rec = structable.New(db, dbFlavor).Bind("users", o)
+	return o
+}
+
+func (u *User) Load() error {
+	return u.rec.Load()
+}
+
+func (u *User) Save() error {
+	if ok, _ := u.rec.Exists(); ok {
+		return u.rec.Update()
+	}
+
+	return u.rec.Insert()
+}

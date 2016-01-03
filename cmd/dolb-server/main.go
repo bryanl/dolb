@@ -49,7 +49,10 @@ func main() {
 		log.WithError(err).Fatal("could not create Api")
 	}
 
-	dolbSite := site.New()
+	siteConfig := &site.Config{
+		DBSession: c.DBSession,
+	}
+	dolbSite := site.New(siteConfig)
 
 	rootMux := mux.NewRouter()
 	rootMux.Handle("/api/", serverAPI.Mux)
