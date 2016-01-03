@@ -1,8 +1,12 @@
 package site
 
 import (
+	"fmt"
+	"html/template"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -12,6 +16,41 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/digitalocean"
 )
+
+var templates map[string]*template.Template
+
+func init() {
+	if templates == nil {
+		templates = make(map[string]*template.Template)
+	}
+
+	includes := []string{}
+	layouts := []string{}
+	for _, name := range AssetNames() {
+		if strings.HasPrefix(name, "templates/includes") {
+			includes = append(includes, name)
+		} else if strings.HasPrefix(name, "templates/layouts") {
+			layouts = append(layouts, name)
+		}
+	}
+
+	for _, layout := range layouts {
+		key := filepath.Base(layout)
+		templates[key] = template.New(key)
+
+		files := append(includes, layout)
+		for _, file := range files {
+			in, err := Asset(file)
+			if err != nil {
+				logrus.WithField("asset-name", file).
+					WithError(err).
+					Fatal("could not load asset")
+			}
+
+			template.Must(templates[key].Parse(string(in)))
+		}
+	}
+}
 
 type Config struct {
 	DBSession dao.Session
@@ -111,4 +150,14 @@ func (w *loggedResponse) Write(d []byte) (int, error) { return w.w.Write(d) }
 func (w *loggedResponse) WriteHeader(status int) {
 	w.status = status
 	w.w.WriteHeader(status)
+}
+
+func renderTemplate(w http.ResponseWriter, name string, data interface{}) error {
+	tmpl, ok := templates[name]
+	if !ok {
+		return fmt.Errorf("The template %s does not exist.", name)
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return tmpl.ExecuteTemplate(w, "base", data)
 }

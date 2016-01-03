@@ -1,0 +1,21 @@
+{{ define "title" }} DOLB {{ end }}
+
+{{ define "content" }}
+<h1>DOLB</h1>
+
+{{ if .UnknownUser }}
+<div class="row">
+	<div class="col-md-12">
+		<a href="/auth/digitalocean">Log in with DigitalOcean</a>
+	</div>
+</div>
+{{ end }}
+
+{{ if not .UnknownUser }}
+<div class="row">
+	<div class="col-md-12">
+		<a href="/lb/new">Create load balancer</a>
+	</div>
+</div>
+{{ end }}
+{{ end }}

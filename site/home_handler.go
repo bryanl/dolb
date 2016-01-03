@@ -2,7 +2,6 @@ package site
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -26,26 +25,19 @@ func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := session.Values["user_id"].(string)
-
-	tmpl, err := Asset("templates/home.html")
-	if err != nil {
-		w.WriteHeader(500)
-		fmt.Fprintln(w, err)
-	}
-
-	t, err := template.New("home").Parse(string(tmpl))
-	if err != nil {
-		w.WriteHeader(500)
-		fmt.Fprintln(w, err)
+	var userID string
+	if id, ok := session.Values["user_id"]; ok {
+		userID = id.(string)
 	}
 
 	d := &homeData{
 		UnknownUser: userID == "",
 	}
 
-	err = t.Execute(w, d)
+	err = renderTemplate(w, "home.tmpl", d)
 	if err != nil {
 		logrus.WithError(err).Error("could not render home template")
+		w.WriteHeader(500)
+		fmt.Fprintln(w, err)
 	}
 }
