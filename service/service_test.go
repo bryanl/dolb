@@ -1,64 +1,122 @@
-package service
+package service_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	. "github.com/bryanl/dolb/service"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func TestResponse_MarshalJSON(t *testing.T) {
-	r := Response{Status: http.StatusCreated, Body: map[string]string{"foo": "bar"}}
+var _ = Describe("Service", func() {
 
-	b, err := r.MarshalJSON()
+	Describe("marshalling Response to JSON", func() {
 
-	assert.NoError(t, err)
+		var (
+			r    Response
+			b    []byte
+			err  error
+			code int
+			body interface{}
+		)
 
-	var m map[string]interface{}
-	err = json.Unmarshal(b, &m)
-	assert.NoError(t, err)
+		JustBeforeEach(func() {
+			r = Response{Status: code, Body: body}
+			b, err = r.MarshalJSON()
+		})
 
-	assert.Equal(t, "bar", m["foo"])
-}
+		Context("with a status code < 400", func() {
 
-func TestResponse_MarshalJSON_Error(t *testing.T) {
-	r := Response{Status: http.StatusUnauthorized, Body: "error"}
+			BeforeEach(func() {
+				code = http.StatusCreated
+				body = map[string]string{"foo": "bar"}
+			})
 
-	b, err := r.MarshalJSON()
+			It("doesn't return an error", func() {
+				Ω(err).ToNot(HaveOccurred())
+			})
 
-	assert.NoError(t, err)
+			It("serializes the response", func() {
+				var m map[string]interface{}
+				err = json.Unmarshal(b, &m)
+				Ω(err).ToNot(HaveOccurred())
+				Ω(m["foo"]).To(Equal("bar"))
+			})
+		})
 
-	var m map[string]interface{}
-	err = json.Unmarshal(b, &m)
-	assert.NoError(t, err)
+		Context("with a status code >= 400", func() {
 
-	assert.Equal(t, "error", m["error"])
-}
+			BeforeEach(func() {
+				code = 400
+			})
 
-type testLogger struct{}
+			Context("with a string body", func() {
+				BeforeEach(func() {
+					body = "error 2"
+				})
 
-func (tl *testLogger) SetLogger(*logrus.Entry) {}
+				It("doesn't return an error", func() {
+					Ω(err).ToNot(HaveOccurred())
+				})
 
-func (tl *testLogger) GetLogger() *logrus.Entry { return &logrus.Entry{} }
+				It("returns the body in the error key", func() {
+					var m map[string]interface{}
+					err = json.Unmarshal(b, &m)
+					Ω(err).ToNot(HaveOccurred())
+					Ω(m["error"]).To(Equal(body))
+				})
+			})
 
-func (tl *testLogger) IDGen() string { return "id" }
+			Context("with an error body", func() {
+				BeforeEach(func() {
+					body = errors.New("error 3")
+				})
 
-func TestHandler_ServeHTTP(t *testing.T) {
-	h := &Handler{
-		F: func(config interface{}, r *http.Request) Response {
-			return Response{Status: http.StatusOK}
-		},
-		Config: &testLogger{},
-	}
+				It("doesn't return an error", func() {
+					Ω(err).ToNot(HaveOccurred())
+				})
 
-	req, err := http.NewRequest("POST", "http://example.com/lb", nil)
-	assert.NoError(t, err)
+				It("returns the error message in the error key", func() {
+					var m map[string]interface{}
+					err = json.Unmarshal(b, &m)
+					Ω(err).ToNot(HaveOccurred())
+					Ω(m["error"]).To(Equal("error 3"))
+				})
+			})
 
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
+		})
 
-	assert.Equal(t, http.StatusOK, w.Code)
-}
+	})
+
+	Describe("Handler", func() {
+		It("serves a request", func() {
+			h := &Handler{
+				F: func(config interface{}, r *http.Request) Response {
+					return Response{Status: http.StatusOK}
+				},
+				Config: &testConfig{},
+			}
+
+			req, err := http.NewRequest("POST", "http://example.com/lb", nil)
+			Ω(err).ToNot(HaveOccurred())
+
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, req)
+
+			Ω(w.Code).To(Equal(http.StatusOK))
+		})
+	})
+
+})
+
+type testConfig struct{}
+
+func (tl *testConfig) SetLogger(*logrus.Entry) {}
+
+func (tl *testConfig) GetLogger() *logrus.Entry { return &logrus.Entry{} }
+
+func (tl *testConfig) IDGen() string { return "id" }

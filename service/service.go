@@ -25,7 +25,13 @@ type Response struct {
 // it marshals an error message.
 func (r *Response) MarshalJSON() ([]byte, error) {
 	if r.Status >= 400 {
-		return json.Marshal(map[string]interface{}{"error": r.Body})
+
+		body := r.Body
+		if err, ok := r.Body.(error); ok {
+			body = err.Error()
+		}
+
+		return json.Marshal(map[string]interface{}{"error": body})
 	}
 
 	return json.Marshal(r.Body)
