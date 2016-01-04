@@ -2,10 +2,10 @@ package dao
 
 import (
 	"database/sql"
-	"strconv"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dolbutil"
 
 	_ "github.com/lib/pq" // we are using postgresql
 )
@@ -36,12 +36,8 @@ func NewSession(dsn string, options ...func(*PgSession)) (Session, error) {
 		db: cache,
 		ModelConfig: &ModelConfig{
 			IDGenerator: func() string {
-
-				// NOTE experimenting with twitter's old snowflake id generator
-				s, _ := DefaultSnowflake()
-				ui, _ := s.Next()
-
-				return strconv.FormatUint(ui, 16)
+				id := dolbutil.GenerateRandomID()
+				return dolbutil.TruncateID(id)
 			},
 		},
 	}

@@ -3,11 +3,11 @@ package server
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/do"
+	"github.com/bryanl/dolb/dolbutil"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -48,10 +48,8 @@ func (c *Config) GetLogger() *logrus.Entry {
 }
 
 func (c *Config) IDGen() string {
-	s, _ := dao.DefaultSnowflake()
-	ui, _ := s.Next()
-
-	return strconv.FormatUint(ui, 16)
+	id := dolbutil.GenerateRandomID()
+	return dolbutil.TruncateID(id)
 }
 
 func (c *Config) DigitalOcean(token string) do.DigitalOcean {

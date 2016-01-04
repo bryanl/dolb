@@ -1,13 +1,12 @@
 package agent
 
 import (
-	"strconv"
 	"sync"
 
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/dolbutil"
 	"github.com/bryanl/dolb/firewall"
 	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/service"
@@ -45,10 +44,8 @@ func (c *Config) GetLogger() *logrus.Entry {
 }
 
 func (c *Config) IDGen() string {
-	s, _ := dao.DefaultSnowflake()
-	ui, _ := s.Next()
-
-	return strconv.FormatUint(ui, 16)
+	id := dolbutil.GenerateRandomID()
+	return dolbutil.TruncateID(id)
 }
 
 // API is the http api for the agent.

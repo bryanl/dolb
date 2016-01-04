@@ -5,12 +5,10 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/server"
 	"github.com/gorilla/mux"
 	"github.com/markbates/goth"
@@ -73,7 +71,7 @@ func New(config *server.Config) *Site {
 	)
 
 	router := mux.NewRouter()
-	loggingRouter := loggingMiddleware(idGen, router)
+	loggingRouter := loggingMiddleware(config.IDGen, router)
 	s := &Site{Mux: loggingRouter}
 
 	bh := &baseHandler{config: config}
@@ -93,21 +91,14 @@ func New(config *server.Config) *Site {
 	router.Handle("/lb", lbCreateHandler).Methods("POST")
 
 	homeHandler := &HomeHandler{bh: bh}
-	router.Handle("/", loggingMiddleware(idGen, homeHandler)).Methods("GET")
+	router.Handle("/", homeHandler).Methods("GET")
 
 	// define this last
 	assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"
-	fs := loggingMiddleware(idGen, http.StripPrefix("/", http.FileServer(http.Dir(assetDir))))
+	fs := loggingMiddleware(config.IDGen, http.StripPrefix("/", http.FileServer(http.Dir(assetDir))))
 	router.PathPrefix("/{_dummy:.*}").Handler(fs)
 
 	return s
-}
-
-func idGen() string {
-	s, _ := dao.DefaultSnowflake()
-	ui, _ := s.Next()
-
-	return strconv.FormatUint(ui, 16)
 }
 
 func loggingMiddleware(idGen func() string, h http.Handler) http.Handler {
