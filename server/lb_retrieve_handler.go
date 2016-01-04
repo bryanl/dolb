@@ -20,7 +20,7 @@ func LBRetrieveHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: err, Status: 404}
 	}
 
-	lb := NewLoadBalancerFromDAO(*daolb)
+	lb := NewLoadBalancerFromDAO(*daolb, config.BaseDomain)
 
 	return service.Response{Body: lb, Status: http.StatusOK}
 }

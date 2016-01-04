@@ -12,7 +12,7 @@ import (
 
 // BootstrapClusterResponse is a bootstrap cluster response.
 type BootstrapClusterResponse struct {
-	LoadBalancer LoadBalancer
+	LoadBalancer LoadBalancerResponse
 }
 
 // LBCreateHandler is a http handler for creating a load balancer.
@@ -32,7 +32,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	bcResp := BootstrapClusterResponse{
-		LoadBalancer: NewLoadBalancerFromDAO(*lb),
+		LoadBalancer: NewLoadBalancerFromDAO(*lb, config.BaseDomain),
 	}
 
 	return service.Response{Body: bcResp, Status: http.StatusCreated}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -10,22 +11,23 @@ import (
 
 // LoadBalancersResponse is a response with load balancers.
 type LoadBalancersResponse struct {
-	LoadBalancers []LoadBalancer `json:"load_balancers"`
+	LoadBalancers []LoadBalancerResponse `json:"load_balancers"`
 }
 
-// LoadBalancer is a load balancer.
-type LoadBalancer struct {
+// LoadBalancerResponse is a response with a load balancer.
+type LoadBalancerResponse struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
 	State      string     `json:"state"`
 	Leader     string     `json:"leader"`
 	Region     string     `json:"region"`
 	FloatingIP FloatingIP `json:"floating_ip"`
+	Host       string     `json:"host"`
 }
 
 // NewLoadBalancerFromDAO converts a dao LoadBalancer to an API LoadBalancer.
-func NewLoadBalancerFromDAO(lb dao.LoadBalancer) LoadBalancer {
-	return LoadBalancer{
+func NewLoadBalancerFromDAO(lb dao.LoadBalancer, baseDomain string) LoadBalancerResponse {
+	return LoadBalancerResponse{
 		ID:     lb.ID,
 		Name:   lb.Name,
 		State:  lb.State,
@@ -35,6 +37,7 @@ func NewLoadBalancerFromDAO(lb dao.LoadBalancer) LoadBalancer {
 			ID:        lb.FloatingIpID,
 			IPAddress: lb.FloatingIp,
 		},
+		Host: fmt.Sprintf("c-%s.%s", lb.Name, baseDomain),
 	}
 }
 
@@ -55,9 +58,9 @@ func LBListHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	lbr := LoadBalancersResponse{}
-	lbr.LoadBalancers = make([]LoadBalancer, len(lbs))
+	lbr.LoadBalancers = make([]LoadBalancerResponse, len(lbs))
 	for i, lb := range lbs {
-		lbr.LoadBalancers[i] = NewLoadBalancerFromDAO(lb)
+		lbr.LoadBalancers[i] = NewLoadBalancerFromDAO(lb, config.BaseDomain)
 	}
 
 	return service.Response{Body: lbr, Status: http.StatusOK}
