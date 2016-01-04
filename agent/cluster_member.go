@@ -3,6 +3,7 @@ package agent
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -58,6 +59,7 @@ type ClusterMember struct {
 	refresh  func(el *ClusterMember) error
 
 	logger *logrus.Entry
+	mu     sync.Mutex
 }
 
 // NewClusterMember builds a ClusterMember.
@@ -87,12 +89,17 @@ func (cm *ClusterMember) Change() chan ClusterStatus {
 		for {
 			select {
 			case <-t.C:
-				if cm.Leader != "" && leader != cm.Leader {
+				cm.mu.Lock()
+				currentLeader := cm.Leader
+				cm.mu.Unlock()
+
+				if leader != currentLeader {
 					cs := ClusterStatus{
-						IsLeader:  cm.Leader == cm.name,
-						Leader:    cm.Leader,
+						IsLeader:  cm.isLeader(),
+						Leader:    currentLeader,
 						NodeCount: cm.NodeCount,
 					}
+					leader = currentLeader
 					out <- cs
 				}
 			case <-cm.context.Done():
@@ -102,6 +109,12 @@ func (cm *ClusterMember) Change() chan ClusterStatus {
 	}()
 
 	return out
+}
+
+func (cm *ClusterMember) isLeader() bool {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	return cm.name == cm.Leader
 }
 
 func (cm *ClusterMember) key() string {
@@ -178,11 +191,13 @@ func poll(cm *ClusterMember) error {
 	logMsg := cm.logger
 	shouldLog := false
 
+	cm.mu.Lock()
 	if l := leader.Name; cm.Leader != l {
 		logMsg = logMsg.WithField("leader", l)
 		cm.Leader = l
 		shouldLog = true
 	}
+	cm.mu.Unlock()
 
 	if nc := leader.NodeCount; cm.NodeCount != nc {
 		logMsg = logMsg.WithField("node-count", nc)

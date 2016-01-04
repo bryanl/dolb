@@ -50,7 +50,11 @@ var _ = Describe("ClusterMember", func() {
 
 			csChan := cm.Change()
 
-			go func() { cm.Leader = cm.name }()
+			go func() {
+				cm.mu.Lock()
+				defer cm.mu.Unlock()
+				cm.Leader = cm.name
+			}()
 			cs := <-csChan
 			Ω(cs.Leader).To(Equal(cm.name))
 			Ω(cs.IsLeader).To(BeTrue())
