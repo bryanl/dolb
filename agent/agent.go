@@ -16,6 +16,7 @@ import (
 
 var (
 	haproxyDiscoverKey = "/haproxy-discover/services"
+	pingRate           = 10 * time.Second
 )
 
 // Agent is the load balancer agent. It controlls all things load balancer.
@@ -82,8 +83,14 @@ func pingServer(config *Config) error {
 
 // PollClusterStatus polls cluster status to see if this node is the leader.
 func (a *Agent) PollClusterStatus() {
+	ticker := time.NewTicker(pingRate)
 	for {
 		select {
+		case <-ticker.C:
+			if err := pingServer(a.Config); err != nil {
+				a.Config.logger.WithError(err).Error("could not register agent")
+			}
+
 		case cs := <-a.ClusterMember.Change():
 			a.Config.logger.WithFields(log.Fields{
 				"leader":     cs.Leader,
@@ -114,9 +121,6 @@ func (a *Agent) PollClusterStatus() {
 				handleLeaderElection(a)
 			}
 
-			if err := pingServer(a.Config); err != nil {
-				a.Config.logger.WithError(err).Error("could not register agent")
-			}
 		}
 	}
 }

@@ -59,7 +59,7 @@
 {{ range .Agents }}
 <div class="row">
   <div class="col-md-12">
-    <h3>Agent {{ .ID }}</h3>
+    <h3>Agent {{ .Name }}</h3>
   </div>
 </div>
 
@@ -74,8 +74,8 @@
 
       <tbody>
         <tr>
-          <td>Name</td>
-          <td> {{ .Name }}</td>
+          <td>ID</td>
+          <td> {{ .ID }}</td>
         </tr>
         <tr>
           <td>Droplet</td>
