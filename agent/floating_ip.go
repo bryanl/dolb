@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	fipKey            = "/agent/floating_ip"
-	fipDropletKey     = "/agent/floating_ip_droplet"
-	actionPollTimeout = time.Second
+	fipKey        = "/agent/floating_ip"
+	fipDropletKey = "/agent/floating_ip_droplet"
 )
 
 // FloatingIPManager manages DigitalOcean floating ips for the agent.
