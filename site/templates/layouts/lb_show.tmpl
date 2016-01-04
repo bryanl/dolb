@@ -1,11 +1,93 @@
 {{ define "title" }} DOLB: Load Balancer {{ end }}
 
 {{ define "content" }}
+
 <div class="row">
   <div class="col-md-12">
+    <h2>Load Balancer {{ .LoadBalancer.Name }}</h2>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Key</th><th>Value</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr>
+          <td>ID</td>
+          <td>{{ .LoadBalancer.ID }}
+        </tr>
+
+        <tr>
+          <td>Region</td>
+          <td>{{ .LoadBalancer.Region }}
+        </tr>
+
+        <tr>
+          <td>Leader</td>
+          <td>{{ .LoadBalancer.Leader }}
+        </tr>
+
+        <tr>
+          <td>Floating IP</td>
+          <td>{{ .LoadBalancer.FloatingIp }}
+        </tr>
+
+        <tr>
+          <td>State</td>
+          <td>{{ .LoadBalancer.State }}
+        </tr>
+      </tbody>
+    </table>
     <p>
-    One day i will show a load balancer
     </p>
   </div>
 </div>
+
+<div class="row">
+  <div class="col-md-12">
+    <h2>Agents</h2>
+  </div>
+</div>
+
+{{ range .Agents }}
+<div class="row">
+  <div class="col-md-12">
+    <h3>Agent {{ .ID }}</h3>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <table class="table">
+      <thead>
+        <tr>
+        <th>Key</th><th>Value</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr>
+          <td>Name</td>
+          <td> {{ .Name }}</td>
+        </tr>
+        <tr>
+          <td>Droplet</td>
+          <td> {{ .DropletID }}</td>
+        </tr>
+        <tr>
+          <td>Last Seen At</td>
+          <td> {{ .LastSeenAt }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ end }}
 {{ end }}
