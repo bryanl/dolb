@@ -90,12 +90,19 @@ func New(config *server.Config) *Site {
 	lbCreateHandler := &LBCreateHandler{bh: bh}
 	router.Handle("/lb", lbCreateHandler).Methods("POST")
 
-	homeHandler := &HomeHandler{bh: bh}
-	router.Handle("/", homeHandler).Methods("GET")
+	//homeHandler := &HomeHandler{bh: bh}
+	//router.Handle("/", homeHandler).Methods("GET")
 
 	// define this last
-	assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"
-	fs := loggingMiddleware(config.IDGen, http.StripPrefix("/", http.FileServer(http.Dir(assetDir))))
+	//assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"
+	baseAssetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site"
+
+	bowerCompDir := baseAssetDir + "/bower_components"
+	bowerFs := http.StripPrefix("/bower_components", http.FileServer(http.Dir(bowerCompDir)))
+	router.PathPrefix("/bower_components/{_dummy:.*}").Handler(bowerFs)
+
+	appDir := baseAssetDir + "/app"
+	fs := http.StripPrefix("/", http.FileServer(http.Dir(appDir)))
 	router.PathPrefix("/{_dummy:.*}").Handler(fs)
 
 	return s
