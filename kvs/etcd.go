@@ -1,9 +1,19 @@
 package kvs
 
 import (
+	"fmt"
+
 	etcdclient "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
 )
+
+type NodeExistError struct {
+	Key string
+}
+
+func (e *NodeExistError) Error() string {
+	return fmt.Sprintf("%s exists", e.Key)
+}
 
 // EtcdKVS is a kvs based on etcd.
 type Etcd struct {
@@ -49,11 +59,21 @@ func (ekvs *Etcd) Set(key, value string, options *SetOptions) (*Node, error) {
 		PrevIndex: options.PrevIndex,
 	}
 
+	if options.IfNotExist {
+		opts.PrevExist = etcdclient.PrevNoExist
+	}
+
 	resp, err := ekvs.ksapi.Set(ekvs.ctx, key, value, opts)
 	if err != nil {
-		return nil, &KVError{
-			Key: key,
-			Err: err,
+		if eerr, ok := err.(etcdclient.Error); ok && eerr.Code == etcdclient.ErrorCodeNodeExist {
+			return nil, &NodeExistError{
+				Key: key,
+			}
+		} else {
+			return nil, &KVError{
+				Key: key,
+				Err: err,
+			}
 		}
 	}
 

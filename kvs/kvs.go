@@ -32,6 +32,7 @@ type GetOptions struct {
 
 // SetOptions are options for set operations.
 type SetOptions struct {
-	TTL       time.Duration
-	PrevIndex uint64
+	TTL        time.Duration
+	PrevIndex  uint64
+	IfNotExist bool
 }
