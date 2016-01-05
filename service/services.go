@@ -28,3 +28,9 @@ type UpstreamResponse struct {
 	Host string `json:"host"`
 	Port int    `json:"port"`
 }
+
+// UserInfoResponse is a user info response.
+type UserInfoResponse struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
+}

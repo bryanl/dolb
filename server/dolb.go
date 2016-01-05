@@ -19,6 +19,9 @@ type Config struct {
 	DBSession           dao.Session
 	ServerURL           string
 	DigitalOceanFactory func(token string, config *Config) do.DigitalOcean
+	OauthClientID       string
+	OauthClientSecret   string
+	OauthCallback       string
 
 	logger *logrus.Entry
 }
@@ -77,6 +80,7 @@ func New(config *Config) (*API, error) {
 	mux.Handle("/api/lb", service.Handler{Config: config, F: LBCreateHandler}).Methods("POST")
 	mux.Handle("/api/lb/{lb_id}", service.Handler{Config: config, F: LBRetrieveHandler}).Methods("GET")
 	mux.Handle("/api/lb/{lb_id}", service.Handler{Config: config, F: LBDeleteHandler}).Methods("DELETE")
+	mux.Handle("/api/user", service.Handler{Config: config, F: UserRetrieveHandler}).Methods("GET")
 	mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 
 	return a, nil

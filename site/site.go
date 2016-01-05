@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -62,12 +64,12 @@ type Site struct {
 
 func New(config *server.Config) *Site {
 
-	clientID := "ed07f403db0397d43d4d026275203d03a4a2de2b24bf8ca2d7b6fff8987ddd5e"
-	clientSecret := "ad20064ec058d771cd61b5c15f58b8a06cf6af072a9b5d6f63e812c82b7c6518"
+	clientID := config.OauthClientID
+	clientSecret := config.OauthClientSecret
 
 	gothic.CompleteUserAuth = completeUserAuth
 	goth.UseProviders(
-		digitalocean.New(clientID, clientSecret, "https://dolb.ngrok.io/auth/digitalocean/callback", "read write"),
+		digitalocean.New(clientID, clientSecret, config.OauthCallback, "read write"),
 	)
 
 	router := mux.NewRouter()
@@ -90,20 +92,25 @@ func New(config *server.Config) *Site {
 	lbCreateHandler := &LBCreateHandler{bh: bh}
 	router.Handle("/lb", lbCreateHandler).Methods("POST")
 
+	// TODO clean this up for prod mode
 	//homeHandler := &HomeHandler{bh: bh}
 	//router.Handle("/", homeHandler).Methods("GET")
 
 	// define this last
 	//assetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site/assets/"
-	baseAssetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site"
+	//baseAssetDir := "/Users/bryan/Development/go/src/github.com/bryanl/dolb/site"
 
-	bowerCompDir := baseAssetDir + "/bower_components"
-	bowerFs := http.StripPrefix("/bower_components", http.FileServer(http.Dir(bowerCompDir)))
-	router.PathPrefix("/bower_components/{_dummy:.*}").Handler(bowerFs)
+	//bowerCompDir := baseAssetDir + "/bower_components"
+	//bowerFs := http.StripPrefix("/bower_components", http.FileServer(http.Dir(bowerCompDir)))
+	//router.PathPrefix("/bower_components/{_dummy:.*}").Handler(bowerFs)
 
-	appDir := baseAssetDir + "/app"
-	fs := http.StripPrefix("/", http.FileServer(http.Dir(appDir)))
-	router.PathPrefix("/{_dummy:.*}").Handler(fs)
+	//appDir := baseAssetDir + "/app"
+	//fs := http.StripPrefix("/", http.FileServer(http.Dir(appDir)))
+	//router.PathPrefix("/{_dummy:.*}").Handler(fs)
+
+	u, _ := url.Parse("http://localhost:9000")
+	rp := httputil.NewSingleHostReverseProxy(u)
+	router.Handle("/{_dummy:.*}", rp)
 
 	return s
 }

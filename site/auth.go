@@ -1,9 +1,11 @@
 package site
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
@@ -16,6 +18,11 @@ var (
 	sessionName  = "_gothic_session"
 	sessionStore = sessions.NewCookieStore([]byte("secret"))
 )
+
+type userInfo struct {
+	UserID string
+	Email  string
+}
 
 func beginGoth(w http.ResponseWriter, r *http.Request) {
 	url, err := getAuthURL(w, r)
@@ -50,6 +57,28 @@ func (oc *OauthCallback) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.AccessToken = user.AccessToken
+
+	ui := userInfo{
+		UserID: u.ID,
+		Email:  u.Email,
+	}
+
+	j, err := json.Marshal(ui)
+	if err != nil {
+		logrus.WithError(err).Error("unable to create session")
+		w.WriteHeader(500)
+		fmt.Fprint(w, "session is unavailable")
+		return
+	}
+
+	cookie := &http.Cookie{
+		Name:    "dolb_user_info",
+		Value:   string(j),
+		Expires: time.Now().Add(time.Hour * 24 * 30),
+		Path:    "/",
+	}
+
+	http.SetCookie(w, cookie)
 
 	session, err := sessionStore.Get(r, "_dolb_session")
 	if err != nil {

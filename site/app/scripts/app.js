@@ -17,7 +17,7 @@ angular
     'ngSanitize',
     'ngTouch'
   ])
-  .config(function ($routeProvider) {
+  .config(function ($routeProvider, $locationProvider) {
     $routeProvider
       .when('/', {
         templateUrl: 'views/main.html',
@@ -30,4 +30,21 @@ angular
       .otherwise({
         redirectTo: '/'
       });
+
+      $locationProvider.html5Mode(true);
+  })
+  .factory('session', function($http, $q, $rootScope) {
+    var defer = $q.defer();
+
+    $http.get('/api/user')
+      .success(function(res) {
+        console.log(res);
+        $rootScope.UserInfo = res;
+        defer.resolve('done');
+      })
+      .error(function() {
+        defer.reject();
+      });
+
+    return defer.promise;
   });

@@ -20,9 +20,12 @@ const (
 )
 
 var (
-	addr      = envflag.String("ADDR", ":8888", "listen address")
-	dbURL     = envflag.String("DB_URL", "", "URL for database")
-	serverURL = envflag.String("SERVER_URL", "", "URL for this service")
+	addr              = envflag.String("ADDR", ":8888", "listen address")
+	dbURL             = envflag.String("DB_URL", "", "URL for database")
+	serverURL         = envflag.String("SERVER_URL", "", "URL for this service")
+	oauthClientID     = envflag.String("OAUTH_CLIENT_ID", "", "oauth client id")
+	oauthClientSecret = envflag.String("OAUTH_CLIENT_SECRET", "", "oauth client secret")
+	oauthCallback     = envflag.String("OAUTH_CALLBACK_URL", "", "oauth callback URL")
 )
 
 func main() {
@@ -38,6 +41,10 @@ func main() {
 		log.Fatal("DB_URL environment variable is required")
 	}
 
+	if *oauthClientID == "" || *oauthClientSecret == "" || *oauthCallback == "" {
+		log.Fatal("OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, and OAUTH_CALLBACK_URL environment variables are required")
+	}
+
 	sess, err := dao.NewSession(*dbURL)
 	if err != nil {
 		log.WithError(err).Fatal("could not create database connection")
@@ -48,6 +55,10 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("could not create Api")
 	}
+
+	c.OauthClientID = *oauthClientID
+	c.OauthClientSecret = *oauthClientSecret
+	c.OauthCallback = *oauthCallback
 
 	dolbSite := site.New(c)
 
