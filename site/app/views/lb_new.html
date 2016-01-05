@@ -1,0 +1,103 @@
+<div class="container">
+  <div class="row">
+    <div class="col-md-12">
+      <h2>Create Load Balancer</h2>
+
+      <form class="form-horizontal">
+        <fieldset>
+
+          <legend>Settings</legend>
+
+          <!-- Text input-->
+          <div class="form-group">
+            <label class="col-md-2 control-label" for="name">Name</label>  
+            <div class="col-md-4">
+              <input ng-model="lbForm.name" type="text" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Select Basic -->
+          <div class="form-group">
+            <label class="col-md-2 control-label" for="region">Region</label>
+            <div class="col-md-4">
+              <select ng-model="lbForm.region" class="form-control">
+                <option value="nyc1">nyc1</option>
+                <option value="ams1">ams1</option>
+                <option value="sfo1">sfo1</option>
+                <option value="ams2">ams2</option>
+                <option value="sgp1">sgp1</option>
+                <option value="lon1">lon1</option>
+                <option value="nyc3">nyc3</option>
+                <option value="ams3">ams3</option>
+                <option value="fra1">fra1</option>
+                <option value="tor1">tor1</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Text input-->
+          <div class="form-group">
+            <label class="col-md-2 control-label" for="ssh_keys">SSH Keys</label>  
+            <div class="col-md-4">
+              <input ng-model="lbForm.sshKeys" type="text" placeholder="97313" class="form-control">
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="form-group">
+          <div class="row">
+          <div class="col-md-offset-2 col-md-4">
+            <div class="well">
+            <p>
+            Load Balancers can be configured to log to a remote syslog host. All logs from the Load
+            Balancer agents will be sent to the host.
+            </p>
+            </div>
+          </div>
+          </div>
+
+          <div class="col-md-offset-2 checkbox">
+
+            <label>
+              <input type="checkbox" ng-model="lbForm.enableLogging">Enable Logging</input>
+            </label>
+          </div>
+        </div>
+
+
+        <fieldset>
+          <legend>Logging</legend>
+
+          <div class="form-group">
+            <label class="col-md-2 control-label" for="host">Host</label>  
+            <div class="col-md-4">
+              <input ng-model="lbForm.loggingHost" type="text" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-md-2 control-label" for="port">Port</label>  
+            <div class="col-md-4">
+              <input ng-model="lbForm.loggingPort" type="text" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="col-md-offset-2 checkbox">
+              <label>
+                <input type="checkbox" value="enabled" ng-model="lbForm.loggingSSL">
+                Enable SSL
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="form-group">
+          <div class="col-md-offset-2">
+            <button type="submit" class="btn btn-primary" ng-click="lbForm.submit()">Create Load Balancer</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

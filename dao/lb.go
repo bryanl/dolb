@@ -107,6 +107,7 @@ func (ps *PgSession) LoadLoadBalancer(id string) (*LoadBalancer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return lb, nil
 }
 

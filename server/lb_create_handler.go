@@ -12,7 +12,7 @@ import (
 
 // BootstrapClusterResponse is a bootstrap cluster response.
 type BootstrapClusterResponse struct {
-	LoadBalancer LoadBalancerResponse
+	LoadBalancer LoadBalancerResponse `json:"load_balancer"`
 }
 
 // LBCreateHandler is a http handler for creating a load balancer.

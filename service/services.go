@@ -31,6 +31,7 @@ type UpstreamResponse struct {
 
 // UserInfoResponse is a user info response.
 type UserInfoResponse struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
+	UserID      string `json:"user_id"`
+	Email       string `json:"email"`
+	AccessToken string `json:"access_token"`
 }

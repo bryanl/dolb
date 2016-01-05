@@ -1,6 +1,28 @@
 <div class="container">
-  <h2>My todos</h2>
-  <p class="form-group" ng-repeat="todo in todos">
-    <input type="text" ng-model="todo" class="form-control">
-  </p>
+  <div class="row">
+    <div class="col-md-8">
+      <h2>Load Balancers</h2>
+    </div>
+  </div>
+  </div>
+  <div class="row">
+    <div class="col-md-8">
+      <table class="table">
+        <tr>
+          <th>id</th>
+          <th>name</th>
+          <th>host</th>
+          <th>region</th>
+          <th>state</th>
+        </tr>
+        <tr ng-repeat="lb in lbs.load_balancers">
+          <td class="col-md-2"><a href="#/lb/{{lb.id}}">{{ lb.id }}</a></td>
+          <td>{{ lb.name }}</td>
+          <td>{{ lb.host }}</td>
+          <td class="col-md-1">{{ lb.region }}</td>
+          <td class="col-md-1">{{ lb.state }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
 </div>

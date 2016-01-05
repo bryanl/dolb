@@ -22,5 +22,15 @@ func LBRetrieveHandler(c interface{}, r *http.Request) service.Response {
 
 	lb := NewLoadBalancerFromDAO(*daolb, config.BaseDomain)
 
+	agents, err := config.DBSession.LoadBalancerAgents(lbID)
+	if err != nil {
+		logrus.WithError(err).Error("could not retrieve load balancer agents")
+		return service.Response{Body: err, Status: 404}
+	}
+
+	for _, a := range agents {
+		lb.Agents = append(lb.Agents, NewAgentFromDAO(a))
+	}
+
 	return service.Response{Body: lb, Status: http.StatusOK}
 }

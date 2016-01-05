@@ -1,0 +1,85 @@
+<div class="container">
+  <div class="row">
+    <div class="col-md-8">
+      <h2>Load Balancer <span ng-bind="lb.host"></span></h2>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Key</th><th>Value</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr>
+            <td class="col-md-3">ID</td>
+            <td><span ng-bind="lb.id"></td>
+          </tr>
+
+          <tr>
+            <td class="col-md-3">Host</td>
+            <td><span ng-bind="lb.host"></td>
+          </tr>
+
+          <tr>
+            <td class="col-md-3">Region</td>
+            <td><span ng-bind="lb.region"></td>
+          </tr>
+
+          <tr>
+            <td class="col-md-3">Leader</td>
+            <td><span ng-bind="lb.leader"></td>
+          </tr>
+
+          <tr>
+            <td class="col-md-3">Floating IP</td>
+            <td><span ng-bind="lb.floating_ip.ip_address"></td>
+          </tr>
+
+          <tr>
+            <td class="col-md-3">State</td>
+            <td><span ng-bind="lb.state"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div ng-repeat="a in lb.agents">
+    <div class="row">
+      <div class="col-md-12">
+        <h3>Agent {{ a.name }}</h3>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-md-2">Key</th><th>Value</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>ID</td>
+              <td> {{ a.id }}</td>
+            </tr>
+            <tr>
+              <td>Last Seen At</td>
+              <td> {{ a.last_seen_at }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+

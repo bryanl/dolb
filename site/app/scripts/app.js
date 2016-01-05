@@ -17,7 +17,7 @@ angular
     'ngSanitize',
     'ngTouch'
   ])
-  .config(function ($routeProvider, $locationProvider) {
+  .config(function ($routeProvider) {
     $routeProvider
       .when('/', {
         templateUrl: 'views/main.html',
@@ -27,11 +27,17 @@ angular
         templateUrl: 'views/about.html',
         controller: 'AboutCtrl'
       })
+      .when('/lb/new', {
+        templateUrl: 'views/lb_new.html',
+        controller: 'LBNewCtrl'
+      })
+      .when('/lb/:lbid', {
+        templateUrl: 'views/lb_show.html',
+        controller: 'LBShowCtrl'
+      })
       .otherwise({
         redirectTo: '/'
       });
-
-      $locationProvider.html5Mode(true);
   })
   .factory('session', function($http, $q, $rootScope) {
     var defer = $q.defer();

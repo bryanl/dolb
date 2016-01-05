@@ -32,8 +32,9 @@ func UserRetrieveHandler(c interface{}, r *http.Request) service.Response {
 	}
 
 	uir := service.UserInfoResponse{
-		UserID: u.ID,
-		Email:  u.Email,
+		UserID:      u.ID,
+		Email:       u.Email,
+		AccessToken: u.AccessToken,
 	}
 
 	return service.Response{Body: uir, Status: 200}

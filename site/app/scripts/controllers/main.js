@@ -2,7 +2,7 @@
   'use strict';
 
   angular.module('siteApp')
-    .controller('MainCtrl', function ($scope, $cookies, $window, session) {
+    .controller('MainCtrl', function ($scope, $cookies, $window, session, $http) {
 
       var sessionVar = $cookies.get('_dolb_session');
       if (!sessionVar) {
@@ -11,7 +11,14 @@
       } 
 
       session.then(function() {
-        $scope.todos = ['Item 1', 'Item 2', 'Item 3', 'Item 4'];
+        $http.get('/api/lb')
+          .success(function(res) {
+            $scope.lbs=res;
+            console.log($scope.lbs);
+          })
+          .error(function() {
+            $scope.lbs={'error': 'could not retrieve load balancers'};
+          });
       });
     });
 

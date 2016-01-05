@@ -1,13 +1,9 @@
 package site
 
 import (
-	"fmt"
-	"html/template"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -17,45 +13,6 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/digitalocean"
 )
-
-var templates map[string]*template.Template
-
-func init() {
-	if templates == nil {
-		templates = make(map[string]*template.Template)
-	}
-
-	includes := []string{}
-	layouts := []string{}
-	for _, name := range AssetNames() {
-		if strings.HasPrefix(name, "templates/includes") {
-			includes = append(includes, name)
-		} else if strings.HasPrefix(name, "templates/layouts") {
-			layouts = append(layouts, name)
-		}
-	}
-
-	for _, layout := range layouts {
-		key := filepath.Base(layout)
-		templates[key] = template.New(key)
-
-		files := append(includes, layout)
-		logrus.WithFields(logrus.Fields{
-			"template-name":  key,
-			"template-files": strings.Join(files, ","),
-		}).Info("preloading templates")
-		for _, file := range files {
-			in, err := Asset(file)
-			if err != nil {
-				logrus.WithField("asset-name", file).
-					WithError(err).
-					Fatal("could not load asset")
-			}
-
-			template.Must(templates[key].Parse(string(in)))
-		}
-	}
-}
 
 type Site struct {
 	Mux   http.Handler
@@ -76,21 +33,10 @@ func New(config *server.Config) *Site {
 	loggingRouter := loggingMiddleware(config.IDGen, router)
 	s := &Site{Mux: loggingRouter}
 
-	bh := &baseHandler{config: config}
-
 	// auth
 	router.HandleFunc("/auth/digitalocean", beginGoth).Methods("GET")
 	oauthCallBack := &OauthCallback{DBSession: config.DBSession}
 	router.Handle("/auth/{provider}/callback", oauthCallBack).Methods("GET")
-
-	lbNewHandler := &LBNewHandler{bh: bh}
-	router.Handle("/lb/new", lbNewHandler).Methods("GET")
-
-	lbShowHandler := &LBShowHandler{bh: bh}
-	router.Handle("/lb/{lb_id}", lbShowHandler).Methods("GET")
-
-	lbCreateHandler := &LBCreateHandler{bh: bh}
-	router.Handle("/lb", lbCreateHandler).Methods("POST")
 
 	// TODO clean this up for prod mode
 	//homeHandler := &HomeHandler{bh: bh}
@@ -166,14 +112,4 @@ func (w *loggedResponse) Write(d []byte) (int, error) { return w.w.Write(d) }
 func (w *loggedResponse) WriteHeader(status int) {
 	w.status = status
 	w.w.WriteHeader(status)
-}
-
-func renderTemplate(w http.ResponseWriter, name string, data interface{}) error {
-	tmpl, ok := templates[name]
-	if !ok {
-		return fmt.Errorf("The template %s does not exist.", name)
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	return tmpl.ExecuteTemplate(w, "base", data)
 }
