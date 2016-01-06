@@ -1,7 +1,15 @@
 package kvs
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"strings"
+	"time"
 
 	etcdclient "github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
@@ -152,4 +160,79 @@ func (ekvs *Etcd) Delete(key string) error {
 	}
 
 	return nil
+}
+
+type TLSConfig struct {
+	RootPEM     io.Reader
+	Certificate io.Reader
+	Key         io.Reader
+}
+
+// NewKeysAPI creates an etcd KeysAPI instance.
+func NewKeysAPI(etcdEndpoints string, tc *TLSConfig) (etcdclient.KeysAPI, error) {
+	if etcdEndpoints == "" {
+		return nil, errors.New("missing ETCDENDPOINTS environment variable")
+	}
+
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+
+	if tc != nil {
+		var caCert []byte
+		_, err := tc.RootPEM.Read(caCert)
+		if err != nil {
+			return nil, err
+		}
+
+		roots := x509.NewCertPool()
+		ok := roots.AppendCertsFromPEM(caCert)
+		if !ok {
+			return nil, errors.New("failed to parse root certificate")
+		}
+
+		var cert []byte
+		_, err = tc.Certificate.Read(cert)
+		if err != nil {
+			return nil, err
+		}
+
+		var key []byte
+		_, err = tc.Key.Read(key)
+		if err != nil {
+			return nil, err
+		}
+
+		keyPair, err := tls.X509KeyPair(cert, key)
+		if err != nil {
+			return nil, err
+		}
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:      roots,
+			Certificates: []tls.Certificate{keyPair},
+		}
+	}
+
+	etcdConfig := etcdclient.Config{
+		Endpoints:               []string{},
+		Transport:               transport,
+		HeaderTimeoutPerRequest: time.Second,
+	}
+
+	endpoints := strings.Split(etcdEndpoints, ",")
+	for _, ep := range endpoints {
+		etcdConfig.Endpoints = append(etcdConfig.Endpoints, ep)
+	}
+
+	c, err := etcdclient.New(etcdConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return etcdclient.NewKeysAPI(c), nil
 }

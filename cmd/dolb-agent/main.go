@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/bryanl/dolb/agent"
 	"github.com/bryanl/dolb/firewall"
 	"github.com/bryanl/dolb/kvs"
-	etcdclient "github.com/coreos/etcd/client"
 	"github.com/ianschenck/envflag"
 	"github.com/tylerb/graceful"
 )
@@ -84,7 +82,7 @@ func main() {
 	ef := &firewall.LiveExecFactory{}
 	config.Firewall = firewall.NewIptablesFirewall(ef, logger)
 
-	kapi, err := genKeysAPI()
+	kapi, err := kvs.NewKeysAPI(*etcdEndpoints, nil)
 	if err != nil {
 		log.WithError(err).Fatal("could not create keys api client")
 	}
@@ -137,28 +135,4 @@ func generateInstanceID() string {
 		result[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(result)
-}
-
-func genKeysAPI() (etcdclient.KeysAPI, error) {
-	if *etcdEndpoints == "" {
-		return nil, errors.New("missing ETCDENDPOINTS environment variable")
-	}
-
-	etcdConfig := etcdclient.Config{
-		Endpoints:               []string{},
-		Transport:               etcdclient.DefaultTransport,
-		HeaderTimeoutPerRequest: time.Second,
-	}
-
-	endpoints := strings.Split(*etcdEndpoints, ",")
-	for _, ep := range endpoints {
-		etcdConfig.Endpoints = append(etcdConfig.Endpoints, ep)
-	}
-
-	c, err := etcdclient.New(etcdConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return etcdclient.NewKeysAPI(c), nil
 }
