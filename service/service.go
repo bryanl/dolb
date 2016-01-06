@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -67,6 +68,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(&resp)
 
 	totalTime := time.Now().Sub(now)
+
+	if os.Getenv("QUIET_LOG") == "1" && resp.Status <= 400 {
+		return
+	}
+
 	logger.WithFields(log.Fields{
 		"action":            "web-service",
 		"method":            r.Method,

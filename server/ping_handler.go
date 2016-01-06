@@ -96,7 +96,7 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 		"floating-ip":  rr.FloatingIP,
 		"host":         rr.Host,
 		"is-leader":    rr.IsLeader,
-	}).Info("ping request")
+	}).Debug("ping request")
 
 	rResp := NewPongResponse()
 	return service.Response{Body: rResp, Status: http.StatusCreated}

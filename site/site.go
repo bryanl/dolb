@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -81,6 +82,10 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	loggedWriter := &loggedResponse{w: w}
 
 	h.handler.ServeHTTP(loggedWriter, req)
+
+	if os.Getenv("QUIET_LOG") == "1" && loggedWriter.status <= 400 {
+		return
+	}
 
 	totalTime := time.Now().Sub(now)
 	logger.WithFields(logrus.Fields{
