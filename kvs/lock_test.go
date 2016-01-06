@@ -1,6 +1,7 @@
 package kvs_test
 
 import (
+	"errors"
 	"time"
 
 	. "github.com/bryanl/dolb/kvs"
@@ -12,27 +13,24 @@ import (
 var _ = Describe("Lock", func() {
 
 	var (
-		err error
+		err          error
+		lock         *Lock
+		lockDuration = 100 * time.Millisecond
+		kvs          *MockKVS
+		item         string
 	)
 
+	BeforeEach(func() {
+		item = "foo"
+		kvs = &MockKVS{}
+		lock = NewLock(item, kvs)
+	})
+
+	AfterEach(func() {
+		kvs.AssertExpectations(GinkgoT())
+	})
+
 	Describe("Lock", func() {
-
-		var (
-			lock         *Lock
-			lockDuration = 100 * time.Millisecond
-			kvs          *MockKVS
-			item         string
-		)
-
-		BeforeEach(func() {
-			item = "foo"
-			kvs = &MockKVS{}
-			lock = NewLock(item, kvs)
-		})
-
-		AfterEach(func() {
-			kvs.AssertExpectations(GinkgoT())
-		})
 
 		JustBeforeEach(func() {
 			err = lock.Lock(lockDuration)
@@ -65,6 +63,41 @@ var _ = Describe("Lock", func() {
 
 			It("doesn't return an error", func() {
 				Ω(err).ToNot(HaveOccurred())
+			})
+		})
+
+	})
+
+	Describe("IsLocked", func() {
+
+		var (
+			isLocked bool
+			getOpts  *GetOptions
+		)
+
+		JustBeforeEach(func() {
+			isLocked = lock.IsLocked()
+		})
+
+		Context("key exists", func() {
+
+			BeforeEach(func() {
+				kvs.On("Get", "/dolb/locks/foo", getOpts).Return(&Node{}, nil)
+			})
+
+			It("is locked", func() {
+				Ω(isLocked).To(BeTrue())
+			})
+		})
+
+		Context("key does not exist", func() {
+
+			BeforeEach(func() {
+				kvs.On("Get", "/dolb/locks/foo", getOpts).Return(nil, errors.New("hello"))
+			})
+
+			It("is unlocked", func() {
+				Ω(isLocked).ToNot(BeTrue())
 			})
 		})
 
