@@ -19,6 +19,8 @@
           .error(function() {
             $scope.lbs={'error': 'could not retrieve load balancers'};
           });
+      }, function() {
+        console.log('looks like login failed');
       });
     });
 

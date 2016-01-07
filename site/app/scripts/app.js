@@ -48,7 +48,8 @@ angular
         $rootScope.UserInfo = res;
         defer.resolve('done');
       })
-      .error(function() {
+      .error(function(res) {
+        console.log(JSON.stringify(res));
         defer.reject();
       });
 

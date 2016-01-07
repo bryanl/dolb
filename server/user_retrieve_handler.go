@@ -18,17 +18,17 @@ func UserRetrieveHandler(c interface{}, r *http.Request) service.Response {
 	session, err := sessionStore.Get(r, "_dolb_session")
 	if err != nil {
 		logrus.WithError(err).Error("unable to load session")
-		return service.Response{Body: "unknown user", Status: 400}
+		return service.Response{Body: "unknown user", Status: 401}
 	}
 
 	userID, ok := session.Values["user_id"]
 	if !ok {
-		return service.Response{Body: "unknown user", Status: 400}
+		return service.Response{Body: "unknown user", Status: 401}
 	}
 
 	u, err := config.DBSession.FindUser(userID.(string))
 	if err != nil {
-		return service.Response{Body: "unknown user", Status: 400}
+		return service.Response{Body: "unknown user", Status: 401}
 	}
 
 	uir := service.UserInfoResponse{
