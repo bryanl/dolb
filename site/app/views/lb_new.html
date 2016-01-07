@@ -3,12 +3,14 @@
     <div class="col-md-12">
       <h2>Create Load Balancer</h2>
 
+      <div class="alert alert-danger" role="alert" ng-show="errMessage.length > 0">
+        {{ errMessage }}
+      </div>
+
       <form class="form-horizontal">
         <fieldset>
-
           <legend>Settings</legend>
 
-          <!-- Text input-->
           <div class="form-group">
             <label class="col-md-2 control-label" for="name">Name</label>  
             <div class="col-md-4">
@@ -16,7 +18,6 @@
             </div>
           </div>
 
-          <!-- Select Basic -->
           <div class="form-group">
             <label class="col-md-2 control-label" for="region">Region</label>
             <div class="col-md-4">
@@ -35,7 +36,6 @@
             </div>
           </div>
 
-          <!-- Text input-->
           <div class="form-group">
             <label class="col-md-2 control-label" for="ssh_keys">SSH Keys</label>  
             <div class="col-md-4">
@@ -59,13 +59,13 @@
           <div class="col-md-offset-2 checkbox">
 
             <label>
-              <input type="checkbox" ng-model="lbForm.enableLogging">Enable Logging</input>
+              <input type="checkbox" ng-model="lbForm.enableLogging" value="show">Enable Logging</input>
             </label>
           </div>
         </div>
 
 
-        <fieldset>
+        <fieldset name="logging-opts" ng-show="lbForm.enableLogging">
           <legend>Logging</legend>
 
           <div class="form-group">
@@ -94,7 +94,7 @@
 
         <div class="form-group">
           <div class="col-md-offset-2">
-            <button type="submit" class="btn btn-primary" ng-click="lbForm.submit()">Create Load Balancer</button>
+            <button type="submit" class="btn btn-primary" ng-disabled="submitDisabled()"  ng-click="lbForm.submit()">Create Load Balancer</button>
           </div>
         </div>
       </form>

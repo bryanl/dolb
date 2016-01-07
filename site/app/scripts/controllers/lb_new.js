@@ -5,6 +5,8 @@
     .controller('LBNewCtrl', function ($scope, session, $http, $rootScope, $location) {
       session.then(function() {
 
+        $scope.creating = false;
+
         // because i'm tired of typing this in
         $scope.lbForm = {
           name: 'fe1',
@@ -16,7 +18,17 @@
           loggingSSL: true
         };
 
+
+        $scope.submitDisabled = function() {
+          if ($scope.creating === true) {
+            return true;
+          }
+        };
+
         $scope.lbForm.submit = function() {
+          $scope.errMessage = undefined;
+          $scope.creating = true;
+
           var bootstrapConfig = {
             'digitalocean_token': $rootScope.UserInfo['access_token'], // jshint ignore:line
             name: $scope.lbForm.name,
@@ -32,17 +44,18 @@
             };
           }
 
-          var resp = $http.post('/api/lb', bootstrapConfig, {});
-          resp.success(function(res) {
-            console.log(res.load_balancer.id); //jshint ignore:line
-            var path = '/lb/' + res['load_balancer'].id; // jshint ignore:line
-            $location.path(path);
-          });
-
-          resp.error(function(data, status) {
-            console.log('lb create failed: ' + status);
-            console.log(data);
-          });
+          $http.post('/api/lb', bootstrapConfig, {}).
+            then(function(res) {
+              $scope.creating = false;
+              console.log(res.load_balancer.id); //jshint ignore:line
+              var path = '/lb/' + res['load_balancer'].id; // jshint ignore:line
+              $location.path(path);
+            }).
+            catch(function(e) {
+              $scope.errMessage = e.data.error;
+              console.log(e);
+              $scope.creating = false;
+            });
         };
       });
 
