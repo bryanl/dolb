@@ -7,12 +7,14 @@ import (
 	"github.com/bryanl/dolb/dao"
 )
 
+// LBState manages the states of a load balancer at creation time.
 type LBState struct {
 	lbID      string
 	logger    *logrus.Entry
 	dbSession dao.Session
 }
 
+// Track tracks a load balancer. It sets the initial load balancer state.
 func (ls *LBState) Track() {
 	timer := time.NewTimer(time.Minute * 10)
 	ticker := time.NewTicker(time.Second * 5)

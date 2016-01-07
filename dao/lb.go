@@ -21,6 +21,9 @@ type Session interface {
 
 	FindUser(id string) (*User, error)
 	NewUser() *User
+
+	SaveLoadBalancer(*LoadBalancer) error
+	SaveAgent(*Agent) error
 }
 
 // NewSession builds an instance of PgSession.
@@ -176,4 +179,12 @@ func (ps *PgSession) FindUser(id string) (*User, error) {
 	}
 
 	return u, nil
+}
+
+func (ps *PgSession) SaveLoadBalancer(lb *LoadBalancer) error {
+	return lb.Save()
+}
+
+func (ps *PgSession) SaveAgent(a *Agent) error {
+	return a.Save()
 }

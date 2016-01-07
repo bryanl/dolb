@@ -38,6 +38,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	return service.Response{Body: bcResp, Status: http.StatusCreated}
 }
 
+// CreateLoadBalancer creates a load balancer.
 func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, error) {
 	if bc.DigitalOceanToken == "" {
 		return nil, fmt.Errorf("DigitalOcean token is required")
@@ -47,10 +48,6 @@ func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, 
 	lb.Name = bc.Name
 	lb.Region = bc.Region
 	lb.DigitaloceanAccessToken = bc.DigitalOceanToken
-	err := lb.Save()
-	if err != nil {
-		return nil, err
-	}
 
 	co := config.ClusterOpsFactory()
 	bo := &BootstrapOptions{
@@ -59,7 +56,7 @@ func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, 
 		BootstrapConfig: &bc,
 	}
 
-	err = co.Bootstrap(bo)
+	err := co.Bootstrap(bo)
 	if err != nil {
 		config.GetLogger().WithError(err).Error("could not bootstrap cluster")
 		return nil, err
@@ -68,6 +65,11 @@ func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, 
 	_, err = config.KVS.Set("/dolb/clusters/"+lb.ID, lb.ID, nil)
 	if err != nil {
 		config.GetLogger().WithError(err).Error("could not create cluster in kvs")
+	}
+
+	err = config.DBSession.SaveLoadBalancer(lb)
+	if err != nil {
+		return nil, err
 	}
 
 	config.GetLogger().WithFields(logrus.Fields{

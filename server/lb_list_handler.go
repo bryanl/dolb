@@ -27,6 +27,7 @@ type LoadBalancerResponse struct {
 	Agents     []AgentResponse `json:"agents"`
 }
 
+// AgentResponse is a response with an agent.
 type AgentResponse struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`
@@ -50,6 +51,7 @@ func NewLoadBalancerFromDAO(lb dao.LoadBalancer, baseDomain string) LoadBalancer
 	}
 }
 
+// NewAgentFromDAO converts a dao Agent to an API Agent.
 func NewAgentFromDAO(agent dao.Agent) AgentResponse {
 	return AgentResponse{
 		ID:         agent.ID,

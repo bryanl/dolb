@@ -155,3 +155,27 @@ func (_m *MockSession) NewUser() *User {
 
 	return r0
 }
+func (_m *MockSession) SaveLoadBalancer(_a0 *LoadBalancer) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*LoadBalancer) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+func (_m *MockSession) SaveAgent(_a0 *Agent) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*Agent) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

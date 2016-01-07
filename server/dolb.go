@@ -52,15 +52,18 @@ func (c *Config) SetLogger(l *logrus.Entry) {
 	c.logger = l
 }
 
+// GetLogger returns the config's logger.
 func (c *Config) GetLogger() *logrus.Entry {
 	return c.logger
 }
 
+// IDGen returns a new random id.
 func (c *Config) IDGen() string {
 	id := dolbutil.GenerateRandomID()
 	return dolbutil.TruncateID(id)
 }
 
+// DigitalOcean returns a new instance of do.DigitalOcean.
 func (c *Config) DigitalOcean(token string) do.DigitalOcean {
 	return c.DigitalOceanFactory(token, c)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// LBDeleteHandler deletes a load balancer.
 func LBDeleteHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 
