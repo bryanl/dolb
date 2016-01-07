@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/server"
 	"github.com/bryanl/dolb/site"
 	"github.com/gorilla/mux"
@@ -26,6 +27,10 @@ var (
 	oauthClientID     = envflag.String("OAUTH_CLIENT_ID", "", "oauth client id")
 	oauthClientSecret = envflag.String("OAUTH_CLIENT_SECRET", "", "oauth client secret")
 	oauthCallback     = envflag.String("OAUTH_CALLBACK_URL", "", "oauth callback URL")
+	etcdEndpoints     = envflag.String("ETCDENDPOINTS", "", "comma separted list of ectd endpoints")
+	etcdCAPemFile     = envflag.String("ETCD_CA_PEM", "", "etcd ca pem")
+	etcdClientKeyFile = envflag.String("ETCD_CLIENT_KEY", "", "etcd ca key")
+	etcdClientPemFile = envflag.String("ETCD_CLIENT_PEM", "", "etcd ca pem")
 )
 
 func main() {
@@ -60,6 +65,13 @@ func main() {
 	c.OauthClientSecret = *oauthClientSecret
 	c.OauthCallback = *oauthCallback
 
+	kv, err := initKVS(c)
+	if err != nil {
+		log.WithError(err).Fatal("could not initialize kvs")
+	}
+
+	c.KVS = kv
+
 	dolbSite := site.New(c)
 
 	rootMux := mux.NewRouter()
@@ -89,5 +101,18 @@ func main() {
 	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 		log.WithError(err).Panic("unexpected error")
 	}
+}
 
+func initKVS(c *server.Config) (kvs.KVS, error) {
+	tlsConfig := &kvs.TLSConfig{
+		RootPEM:     *etcdCAPemFile,
+		Certificate: *etcdClientPemFile,
+		Key:         *etcdClientKeyFile,
+	}
+	kapi, err := kvs.NewKeysAPI(*etcdEndpoints, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return kvs.NewEtcd(c.Context, kapi), nil
 }

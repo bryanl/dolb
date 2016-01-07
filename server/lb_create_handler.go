@@ -65,6 +65,11 @@ func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, 
 		return nil, err
 	}
 
+	_, err = config.KVS.Set("/dolb/clusters/"+lb.ID, lb.ID, nil)
+	if err != nil {
+		config.GetLogger().WithError(err).Error("could not create cluster in kvs")
+	}
+
 	config.GetLogger().WithFields(logrus.Fields{
 		"cluster-name":   bc.Name,
 		"cluster-region": bc.Region,

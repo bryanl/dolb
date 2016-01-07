@@ -4,10 +4,13 @@ import (
 	"errors"
 	"net/http"
 
+	"golang.org/x/net/context"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
 	"github.com/bryanl/dolb/do"
 	"github.com/bryanl/dolb/dolbutil"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -16,7 +19,9 @@ import (
 type Config struct {
 	BaseDomain          string
 	ClusterOpsFactory   func() ClusterOps
+	Context             context.Context
 	DBSession           dao.Session
+	KVS                 kvs.KVS
 	ServerURL           string
 	DigitalOceanFactory func(token string, config *Config) do.DigitalOcean
 	OauthClientID       string
@@ -31,6 +36,7 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 	return &Config{
 		BaseDomain:        bd,
 		ClusterOpsFactory: NewClusterOps,
+		Context:           context.Background(),
 		DBSession:         sess,
 		ServerURL:         su,
 		DigitalOceanFactory: func(token string, config *Config) do.DigitalOcean {

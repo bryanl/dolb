@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -163,9 +163,9 @@ func (ekvs *Etcd) Delete(key string) error {
 }
 
 type TLSConfig struct {
-	RootPEM     io.Reader
-	Certificate io.Reader
-	Key         io.Reader
+	RootPEM     string
+	Certificate string
+	Key         string
 }
 
 // NewKeysAPI creates an etcd KeysAPI instance.
@@ -184,8 +184,7 @@ func NewKeysAPI(etcdEndpoints string, tc *TLSConfig) (etcdclient.KeysAPI, error)
 	}
 
 	if tc != nil {
-		var caCert []byte
-		_, err := tc.RootPEM.Read(caCert)
+		caCert, err := ioutil.ReadFile(tc.RootPEM)
 		if err != nil {
 			return nil, err
 		}
@@ -196,14 +195,12 @@ func NewKeysAPI(etcdEndpoints string, tc *TLSConfig) (etcdclient.KeysAPI, error)
 			return nil, errors.New("failed to parse root certificate")
 		}
 
-		var cert []byte
-		_, err = tc.Certificate.Read(cert)
+		cert, err := ioutil.ReadFile(tc.Certificate)
 		if err != nil {
 			return nil, err
 		}
 
-		var key []byte
-		_, err = tc.Key.Read(key)
+		key, err := ioutil.ReadFile(tc.Key)
 		if err != nil {
 			return nil, err
 		}

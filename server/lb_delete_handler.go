@@ -48,6 +48,14 @@ func LBDeleteHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: err, Status: 500}
 	}
 
+	err = config.KVS.Delete("/dolb/clusters/" + lb.ID)
+	if err != nil {
+		config.logger.
+			WithError(err).
+			WithField("cluster-id", lb.ID).
+			Error("could not delete kvs entry for cluster")
+	}
+
 	return service.Response{Body: nil, Status: 204}
 }
 
