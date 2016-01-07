@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -85,8 +86,32 @@ func NewClusterOps() ClusterOps {
 
 // Bootstrap bootstraps the cluster and returns a tracking URI or error.
 func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
+	if bo.Config == nil {
+		return errors.New("missing config")
+	}
+
+	if bo.BootstrapConfig == nil {
+		return errors.New("missing bootstrap config")
+	}
+
+	if bo.LoadBalancer == nil {
+		return errors.New("missing load balancer")
+	}
+
+	if co.DiscoveryGenerator == nil {
+		return errors.New("missing discovery generator")
+	}
+
+	if bo.Config.DBSession == nil {
+		return errors.New("missing db session")
+	}
+
+	if bo.Config.DigitalOceanFactory == nil {
+		return errors.New("missing digitalocean factory")
+	}
+
 	if name := bo.BootstrapConfig.Name; !isValidClusterName(name) {
-		return fmt.Errorf("invalid cluster name: %q", name)
+		return errors.New("invalid load balancer name")
 	}
 
 	du, err := co.DiscoveryGenerator()
@@ -100,7 +125,7 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 		a := bo.Config.DBSession.NewAgent()
 		a.ClusterID = bo.LoadBalancer.ID
 		a.Name = name
-		err = a.Save()
+		err = bo.Config.DBSession.SaveAgent(a)
 		if err != nil {
 			return err
 		}
@@ -135,8 +160,7 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 
 			a.DropletID = agent.DropletID
 			a.IpID = de.RecordID
-			err = a.Save()
-
+			err = bo.Config.DBSession.SaveAgent(a)
 			if err != nil {
 				logrus.WithError(err).Error("unable to save agent in db")
 				return
