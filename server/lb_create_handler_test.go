@@ -102,6 +102,7 @@ var _ = Describe("LbCreateHandler", func() {
 
 			lb = &dao.LoadBalancer{ID: "1"}
 			sess.On("NewLoadBalancer").Return(lb)
+			sess.On("SaveLoadBalancer", lb).Return(nil)
 
 			expectedBo := &BootstrapOptions{
 				Config:          config,
