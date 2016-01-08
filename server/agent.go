@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	coreosImage           = "coreos-beta"
 	discoveryGeneratorURI = "http://discovery.etcd.io/new"
 	dropletSize           = "512mb"
 )
@@ -23,7 +22,7 @@ type AgentBooter interface {
 
 type agentBooter struct {
 	bo             *BootstrapOptions
-	discoveryToken func() (string, error)
+	discoveryToken string
 }
 
 var _ AgentBooter = &agentBooter{}
@@ -50,11 +49,7 @@ func (ab *agentBooter) Configure(dbAgent *dao.Agent) error {
 	bc := bo.BootstrapConfig
 	doc := bo.Config.DigitalOcean(bc.DigitalOceanToken)
 
-	discoveryToken, err := ab.discoveryToken()
-	if err != nil {
-	}
-
-	ud, err := userData(discoveryToken, dbAgent.ID, bo)
+	ud, err := userData(ab.discoveryToken, dbAgent.ID, bo)
 	if err != nil {
 		return err
 	}

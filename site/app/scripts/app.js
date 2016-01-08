@@ -63,7 +63,7 @@ app.factory('session', function($http, $q, $rootScope, $log) {
   return defer.promise;
 });
 
-app.factory('httpHandler', ['$q', '$log', function($q, $log) {
+app.factory('httpHandler', ['$q', function($q) {
   var interceptor = {
     'responseError': function(response) {
       switch (response.status) {

@@ -13,6 +13,11 @@ coreos:
 
   units:
     - name: etcd2.service
+      drop-ins:
+        - name: 50-timeout.conf
+          content: |
+            [Service]
+            TimeoutStartSec=0
       command: start
     - name: fleet.service
       command: start

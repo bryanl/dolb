@@ -47,6 +47,7 @@ func NewLoadBalancer(db squirrel.DBProxyBeginner, mc *ModelConfig) *LoadBalancer
 
 	o.builder = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).RunWith(db)
 	o.rec = structable.New(db, dbFlavor).Bind("load_balancers", o)
+	o.State = "initializing"
 	return o
 }
 

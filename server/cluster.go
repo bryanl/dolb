@@ -71,9 +71,12 @@ var _ ClusterOps = &LiveClusterOps{}
 func NewClusterOps() ClusterOps {
 	return &LiveClusterOps{
 		AgentBooter: func(bo *BootstrapOptions) AgentBooter {
+
+			t, _ := discoveryGenerator()
+
 			return &agentBooter{
 				bo:             bo,
-				discoveryToken: discoveryGenerator,
+				discoveryToken: t,
 			}
 		},
 	}
@@ -105,10 +108,10 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 		wg.Add(3)
 
 		ab := co.AgentBooter(bo)
-		for _, i := range []int{1, 2, 3} {
-			go func() {
+		for i := 1; i < 4; i++ {
+			go func(id int) {
 				defer wg.Done()
-				agent, err := ab.Create(i)
+				agent, err := ab.Create(id)
 				if err != nil {
 					bo.Config.GetLogger().
 						WithError(err).
@@ -132,7 +135,7 @@ func (co *LiveClusterOps) Bootstrap(bo *BootstrapOptions) error {
 					}).Error("could not configure agent")
 					errors[i] = err
 				}
-			}()
+			}(i)
 		}
 
 		wg.Wait()

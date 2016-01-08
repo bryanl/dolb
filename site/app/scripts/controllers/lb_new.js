@@ -2,7 +2,7 @@
   'use strict';
 
   angular.module('siteApp')
-    .controller('LBNewCtrl', function ($scope, session, $http, $rootScope, $location) {
+    .controller('LBNewCtrl', function ($scope, session, $http, $rootScope, $location, $log) {
       session.then(function() {
 
         $scope.creating = false;
@@ -45,15 +45,15 @@
           }
 
           $http.post('/api/lb', bootstrapConfig, {}).
-            then(function(res) {
+            then(function(response) {
               $scope.creating = false;
-              console.log(res.load_balancer.id); //jshint ignore:line
-              var path = '/lb/' + res['load_balancer'].id; // jshint ignore:line
+              $log.debug(response.data.load_balancer.id); //jshint ignore:line
+              var path = '/lb/' + response.data['load_balancer'].id; // jshint ignore:line
               $location.path(path);
             }).
             catch(function(e) {
+              $log.debug(e);
               $scope.errMessage = e.data.error;
-              console.log(e);
               $scope.creating = false;
             });
         };

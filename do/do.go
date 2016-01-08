@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	coreosImage   = "coreos-beta"
+	coreosImage   = "coreos-alpha"
 	ActionTimeout = 5 * time.Second
 )
 
