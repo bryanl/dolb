@@ -83,12 +83,12 @@ func deleteLB(lb *dao.LoadBalancer, godoc do.DigitalOcean, logger *logrus.Entry)
 	var err error
 
 	if lb.FloatingIpID > 0 {
-		lb.FloatingIpID = 0
 		err = godoc.DeleteDNS(lb.FloatingIpID)
 		if err != nil {
 			logger.WithError(err).Error("could not delete load balancer ip")
 			return err
 		}
+		lb.FloatingIpID = 0
 	}
 
 	lb.FloatingIp = ""
