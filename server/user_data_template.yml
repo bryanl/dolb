@@ -67,6 +67,29 @@ coreos:
         Type=oneshot
         ExecStart=/home/core/units/start-agent.sh
 
+    - name: swapon.service
+      command: start
+      content: |
+        [Unit]
+        Description=Turn on swap
+
+        [Service]
+        Type=oneshot
+        Environment="SWAPFILE=/1GiB.swap"
+        RemainAfterExit=true
+        ExecStartPre=/usr/bin/touch ${SWAPFILE}
+        ExecStartPre=/usr/bin/chattr +C ${SWAPFILE}
+        ExecStartPre=/usr/bin/fallocate -l 1024m ${SWAPFILE}
+        ExecStartPre=/usr/bin/chmod 600 ${SWAPFILE}
+        ExecStartPre=/usr/sbin/mkswap ${SWAPFILE}
+        ExecStartPre=/usr/sbin/losetup -f ${SWAPFILE}
+        ExecStart=/usr/bin/sh -c "/sbin/swapon $(/usr/sbin/losetup -j ${SWAPFILE} | /usr/bin/cut -d : -f 1)"
+        ExecStop=/usr/bin/sh -c "/sbin/swapoff $(/usr/sbin/losetup -j ${SWAPFILE} | /usr/bin/cut -d : -f 1)"
+        ExecStopPost=/usr/bin/sh -c "/usr/sbin/losetup -d $(/usr/sbin/losetup -j ${SWAPFILE} | /usr/bin/cut -d : -f 1)"
+
+        [Install]
+        WantedBy=multi-user.target
+
 write_files:
   - path: /home/core/units/start-agent.sh
     permissions : 0755
