@@ -21,6 +21,13 @@ coreos:
       command: start
     - name: fleet.service
       command: start
+    - name: fleet.socket
+      command: start
+      drop-ins:
+        - name: 30-listen.conf
+          content: |
+            [Socket]
+            ListenStream=127.0.0.1:49153
 
     - name: dolb_firewall.service
       command: start
