@@ -76,7 +76,7 @@ func pingServer(config *Config) error {
 	config.logger.WithFields(log.Fields{
 		"server-url":   config.ServerURL,
 		"cluster-name": config.ClusterName,
-	}).Info("register agent")
+	}).Debug("register agent")
 
 	return nil
 }
