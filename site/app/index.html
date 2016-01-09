@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <!-- endbuild -->
   </head>
-  <body ng-app="siteApp">
+  <body ng-app="siteApp" class="fill">
     <!--[if lt IE 7]>
       <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
       <![endif]-->
@@ -53,16 +53,16 @@
         </nav>
       </div>
 
-      <div class="container">
-        <div class="row">
-          <div class="col-md-2">
+      <div class="container-fluid fill">
+        <div class="row fill">
+          <div class="col-md-2 fill">
             <div class="list-group sidebar">
               <a class="list-group-item" href="/#/">Load Balancers</a>
-              <a class="list-group-item" href="/#lb/new">New Load Balancer</a>
+              <a class="list-group-item" href="/#lb/new">Create Load Balancer</a>
             </div>
           </div>
-          <div class="col-md-10">
-            <div ng-view=""></div>
+          <div class="col-md-10 content">
+            <div ng-view="" class="fill"></div>
           </div>
         </div>
       </div>
