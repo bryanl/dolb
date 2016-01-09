@@ -9,6 +9,8 @@
         $scope.lbID = $stateParams.lbID;
         $scope.lb = {};
 
+        $scope.deleting = false;
+
         var u = '/api/lb/' + $scope.lbID;
         $http.get(u)
           .success(function(res) {
@@ -18,7 +20,15 @@
             console.log('error: ' + JSON.stringify(res));
           });
 
+        $scope.deleteDisabled = function() {
+          if ($scope.deleting === true) {
+            return true;
+          }
+        };
+
         $scope.deleteLB = function() {
+          $scope.deleting = true;
+
           var u = '/api/lb/' + $scope.lbID;
           $http.delete(u)
             .success(function() {

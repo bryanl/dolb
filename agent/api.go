@@ -66,6 +66,7 @@ func NewAPI(config *Config) *API {
 	a.Mux.Handle("/services/{service}", service.Handler{Config: config, F: ServiceDeleteHandler}).Methods("DELETE")
 	a.Mux.Handle("/services/{service}/upstreams", service.Handler{Config: config, F: UpstreamCreateHandler}).Methods("PUT")
 	a.Mux.Handle("/services/{service}/upstreams/{upstream}", service.Handler{Config: config, F: UpstreamDeleteHandler}).Methods("DELETE")
+	a.Mux.Handle("/agent/reload", service.Handler{Config: config, F: AgentReloadHandler}).Methods("POST")
 
 	return a
 }

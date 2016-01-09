@@ -21,6 +21,13 @@ coreos:
       command: start
     - name: fleet.service
       command: start
+    - name: fleet.socket
+      command: start
+      drop-ins:
+        - name: 30-listen.conf
+          content: |
+            [Socket]
+            ListenStream=127.0.0.1:49153
 
     - name: dolb_firewall.service
       command: start
@@ -134,9 +141,9 @@ write_files:
       EnvironmentFile=/etc/environment
       Environment=AGENT_VERSION={{.AgentVersion}}
       ExecStartPre=/usr/bin/docker pull bryanl/dolb-agent:0.0.2
-      ExecStartPre=-/usr/bin/docker kill dolb-agent-%i
-      ExecStart=/usr/bin/docker run -p 8889:8889 --privileged=true --net=host --rm --env-file /home/core/digitalocean.env -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%i bryanl/dolb-agent:0.0.2
-      ExecStop=/usr/bin/docker kill dolb-agent-%i
+      ExecStartPre=-/usr/bin/docker kill dolb-agent-%m
+      ExecStart=/usr/bin/docker run -v /etc/machine-id:/etc/machine-id -p 8889:8889 --privileged=true --net=host --rm --env-file /home/core/digitalocean.env -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%m bryanl/dolb-agent:0.0.2
+      ExecStop=/usr/bin/docker kill dolb-agent-%m
 
       [X-Fleet]
       Conflicts=dolb-agent@*.service
