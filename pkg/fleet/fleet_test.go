@@ -59,6 +59,7 @@ func TestStopService(t *testing.T) {
 		err := json.NewDecoder(r.Body).Decode(&uscr)
 		assert.NoError(t, err)
 		assert.Equal(t, "inactive", uscr.DesiredState)
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -77,6 +78,7 @@ func TestStartService(t *testing.T) {
 		err := json.NewDecoder(r.Body).Decode(&uscr)
 		assert.NoError(t, err)
 		assert.Equal(t, "launched", uscr.DesiredState)
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 		w.WriteHeader(http.StatusNoContent)
 	}))
