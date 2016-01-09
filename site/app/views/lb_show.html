@@ -1,4 +1,4 @@
-<div class="container">
+<div class="container-fluid">
   <div class="row">
     <div class="col-md-8">
       <div class="btn-group" role="group">
@@ -10,6 +10,26 @@
   <div class="row">
     <div class="col-md-8">
       <h2>{{ lb.host }}</h2>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12">
+      <h3>Services</h3>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-2">
+      <div class="list-group">
+        <a class="list-group-item" ui-sref='lb.add_service'>
+          <span class="glyphicon glyphicon-plus" aria-hidden=true"></span>&nbsp;Add Service
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-10" ui-view="">
+       
     </div>
   </div>
 

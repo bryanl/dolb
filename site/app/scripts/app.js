@@ -17,35 +17,47 @@ var app = angular.
       'ngResource',
       'ngRoute',
       'ngSanitize',
-      'ngTouch'
+      'ngTouch',
+      'ui.router'
   ]);
 
+app.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
+  $urlRouterProvider.otherwise('/');
 
-app.config(function ($routeProvider, $httpProvider) {
-  $routeProvider
-    .when('/', {
+  $stateProvider
+    .state('home', {
+      url: '/',
       templateUrl: 'views/main.html',
-      controller: 'MainCtrl'
+      controller: 'MainCtrl',
     })
-  .when('/about', {
-    templateUrl: 'views/about.html',
-    controller: 'AboutCtrl'
-  })
-  .when('/lb/new', {
-    templateUrl: 'views/lb_new.html',
-    controller: 'LBNewCtrl'
-  })
-  .when('/lb/:lbid', {
-    templateUrl: 'views/lb_show.html',
-    controller: 'LBShowCtrl'
-  })
-  .otherwise({
-    redirectTo: '/'
-  });
 
+    .state('lb_new', {
+      url: '/lb/new',
+      templateUrl: 'views/lb_new.html',
+      controller: 'LBNewCtrl',
+    })
+
+    .state('lb', {
+      url: '/lb/{lbID}',
+      templateUrl: 'views/lb_show.html',
+      controller: 'LBShowCtrl',
+    })
+
+    .state('lb.add_service', {
+      templateUrl: 'views/service/add.html',
+      controller: 'ServiceAddCtrl',
+    })
+  ;
+
+
+
+
+}]);
+
+app.config(['$httpProvider', function ($httpProvider) {
   $httpProvider.useApplyAsync(true);
   $httpProvider.interceptors.push('httpHandler');
-});
+}]);
 
 app.factory('session', function($http, $q, $rootScope, $log) {
   var defer = $q.defer();

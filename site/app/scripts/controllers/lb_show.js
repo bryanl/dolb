@@ -2,9 +2,11 @@
   'use strict';
 
   angular.module('siteApp')
-    .controller('LBShowCtrl', function (session, $scope, $routeParams, $http, $location) {
+    .controller('LBShowCtrl', function (session, $scope, $routeParams, $http, $location, $stateParams, $log, $state) {
       session.then(function() {
-        $scope.lbID = $routeParams.lbid;
+        $log.debug('currentState:' + JSON.stringify($stateParams)); 
+
+        $scope.lbID = $stateParams.lbID;
         $scope.lb = {};
 
         var u = '/api/lb/' + $scope.lbID;
@@ -20,7 +22,7 @@
           var u = '/api/lb/' + $scope.lbID;
           $http.delete(u)
             .success(function() {
-              $location.path('/');
+              $state.go('home');
             })
             .error(function(data) {
               console.log('lb delete failed: ' + JSON.stringify(data));
