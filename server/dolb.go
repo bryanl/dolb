@@ -27,6 +27,7 @@ type Config struct {
 	OauthClientID       string
 	OauthClientSecret   string
 	OauthCallback       string
+	LBUpdateChan        chan *dao.LoadBalancer
 
 	logger *logrus.Entry
 }
@@ -43,7 +44,8 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 			client := do.GodoClientFactory(token)
 			return do.NewLiveDigitalOcean(client, config.BaseDomain)
 		},
-		logger: logrus.WithFields(logrus.Fields{}),
+		LBUpdateChan: make(chan *dao.LoadBalancer, 10),
+		logger:       logrus.WithFields(logrus.Fields{}),
 	}
 }
 
@@ -91,6 +93,7 @@ func New(config *Config) (*API, error) {
 	mux.Handle("/api/lb/{lb_id}", service.Handler{Config: config, F: LBDeleteHandler}).Methods("DELETE")
 	mux.Handle("/api/user", service.Handler{Config: config, F: UserRetrieveHandler}).Methods("GET")
 	mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
+	mux.Handle("/api/lb/{lb_id}/services", service.Handler{Config: config, F: ServiceCreateHandler}).Methods("POST")
 
 	return a, nil
 }

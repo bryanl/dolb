@@ -74,8 +74,6 @@ func (ps *PgSession) LoadAgent(id string) (*Agent, error) {
 
 func (ps *PgSession) LoadBalancerAgents(id string) ([]Agent, error) {
 	q := squirrel.Select("id").From("agents").Where("cluster_id = $1", id)
-	str, _, _ := q.ToSql()
-	logrus.WithField("sql", str).Info("lb agents")
 	rows, err := q.RunWith(ps.db).Query()
 	if err != nil {
 		logrus.WithError(err).Error("unable to query agents")

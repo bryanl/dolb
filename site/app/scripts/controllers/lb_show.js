@@ -11,6 +11,11 @@
 
         $scope.deleting = false;
 
+        $scope.canAddService = true;
+        $scope.$watch('lb.state', function(val) {
+          $scope.canAddService = (val !== 'up');
+        });
+
         var u = '/api/lb/' + $scope.lbID;
         $http.get(u)
           .success(function(res) {
@@ -19,6 +24,10 @@
           .error(function(res) {
             console.log('error: ' + JSON.stringify(res));
           });
+
+        $scope.addService = function() {
+          $state.go('lb.add_service');
+        };
 
         $scope.deleteDisabled = function() {
           if ($scope.deleting === true) {

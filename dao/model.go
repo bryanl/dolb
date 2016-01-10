@@ -28,6 +28,7 @@ type LoadBalancer struct {
 	rec       structable.Recorder
 	builder   squirrel.StatementBuilderType
 	mc        *ModelConfig
+	db        squirrel.DBProxyBeginner
 
 	ID                      string `stbl:"id,PRIMARY_KEY"`
 	Name                    string `stbl:"name"`
@@ -43,6 +44,7 @@ type LoadBalancer struct {
 // NewLoadBalancer creates a new LoadBalancers wired to structable.
 func NewLoadBalancer(db squirrel.DBProxyBeginner, mc *ModelConfig) *LoadBalancer {
 	o := new(LoadBalancer)
+	o.db = db
 	o.mc = mc
 
 	o.builder = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).RunWith(db)

@@ -52,6 +52,8 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 	if rr.IsLeader && lb.FloatingIp == "" {
 		if rr.FloatingIP == "" {
 			config.logger.WithFields(logrus.Fields{
+				"agent-id":   rr.AgentID,
+				"host":       rr.Host,
 				"cluster-id": rr.ClusterID,
 			}).Error("no floating ip was sent")
 			return service.Response{Body: err, Status: 400}
@@ -81,13 +83,15 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: err, Status: 500}
 	}
 
-	agent.LastSeenAt = time.Now()
+	agent.LastSeenAt = time.Now().UTC()
 	err = agent.Save()
 
 	if err != nil {
 		config.logger.WithError(err).Error("could not update member")
 		return service.Response{Body: err, Status: 500}
 	}
+
+	config.LBUpdateChan <- lb
 
 	config.logger.WithFields(logrus.Fields{
 		"agent-id":     rr.AgentID,
@@ -96,6 +100,7 @@ func PingHandler(c interface{}, r *http.Request) service.Response {
 		"floating-ip":  rr.FloatingIP,
 		"host":         rr.Host,
 		"is-leader":    rr.IsLeader,
+		"last-seen-at": agent.LastSeenAt,
 	}).Debug("ping request")
 
 	rResp := NewPongResponse()

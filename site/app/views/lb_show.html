@@ -22,9 +22,9 @@
   <div class="row">
     <div class="col-md-2">
       <div class="list-group">
-        <a class="list-group-item" ui-sref='lb.add_service'>
+        <button class="list-group-item" ng-click="addService()" ng-disabled="canAddService" ng-class="{disabled: canAddService}">
           <span class="glyphicon glyphicon-plus" aria-hidden=true"></span>&nbsp;Add Service
-        </a>
+        </button>
       </div>
     </div>
 

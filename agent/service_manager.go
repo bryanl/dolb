@@ -47,6 +47,10 @@ func (esm *EtcdServiceManager) Create(er service.ServiceCreateRequest) error {
 		return errors.New("only supply a domain or a URL regex, not both")
 	}
 
+	if er.Domain == "" && er.Regex == "" {
+		return errors.New("supply a domain or a regex to create a service")
+	}
+
 	if er.Domain != "" {
 		log.WithFields(logrus.Fields{
 			"domain":       er.Domain,
@@ -77,6 +81,8 @@ func (esm *EtcdServiceManager) Create(er service.ServiceCreateRequest) error {
 			}).Info("creating regex service")
 		}
 		return err
+	} else {
+		return errors.New("not sure what type of service to create")
 	}
 
 	// TODO clean me up

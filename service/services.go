@@ -8,6 +8,14 @@ type ServiceCreateRequest struct {
 	Regex  string `json:"url_regex"`
 }
 
+// ServiceCreateResponse is a response to create a service.
+type ServiceCreateResponse struct {
+	Name   string `json:"service_name"`
+	Port   int    `json:"port"`
+	Domain string `json:"domain"`
+	Regex  string `json:"url_regex"`
+}
+
 // ServicesResponse is a services response sent to a client.
 type ServicesResponse struct {
 	Services []ServiceResponse `json:"services"`

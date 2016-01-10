@@ -18,6 +18,8 @@ func ServiceCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
 	}
 
+	config.GetLogger().WithField("ereq", fmt.Sprintf("%#v", ereq)).Info("service create request")
+
 	sm := config.ServiceManagerFactory(config)
 	err = sm.Create(ereq)
 	if err != nil {
@@ -25,5 +27,12 @@ func ServiceCreateHandler(c interface{}, r *http.Request) service.Response {
 		return service.Response{Body: err, Status: 400}
 	}
 
-	return service.Response{Body: config, Status: http.StatusCreated}
+	resp := service.ServiceCreateResponse{
+		Name:   ereq.Name,
+		Port:   ereq.Port,
+		Domain: ereq.Domain,
+		Regex:  ereq.Regex,
+	}
+
+	return service.Response{Body: resp, Status: http.StatusCreated}
 }

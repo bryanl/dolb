@@ -72,6 +72,9 @@ func main() {
 
 	c.KVS = kv
 
+	lbStatus := server.NewLBStatus(c)
+	go lbStatus.Track()
+
 	dolbSite := site.New(c)
 
 	rootMux := mux.NewRouter()
