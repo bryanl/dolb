@@ -33,13 +33,13 @@ app.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $ur
 
     .state('lb_new', {
       url: '/lb/new',
-      templateUrl: 'views/lb_new.html',
+      templateUrl: 'views/loadbalancer/new.html',
       controller: 'LBNewCtrl',
     })
 
     .state('lb', {
       url: '/lb/{lbID}',
-      templateUrl: 'views/lb_show.html',
+      templateUrl: 'views/loadbalancer/show.html',
       controller: 'LBShowCtrl',
     })
 
