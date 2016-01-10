@@ -44,7 +44,9 @@
           <th>Value</th>
         </tr>
         <tr ng-repeat="service in resp.services">
-          <td>{{ service.name }}</td>
+          <td>
+            <a ui-sref="lb.service({lbID: lb.id, serviceID: service.name})">{{ service.name }}</a>
+          </td>
           <td>{{ service.port }}</td>
           <td>{{ service.type }}</td>
           <td>{{ service | getServiceMatcher }}</td>

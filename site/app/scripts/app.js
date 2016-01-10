@@ -47,10 +47,13 @@ app.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $ur
       templateUrl: 'views/service/add.html',
       controller: 'ServiceAddCtrl',
     })
+
+    .state('lb.service', {
+      url: '/service/{serviceID}',
+      teplateUrl: 'views/service/show.html',
+      controller: 'ServiceShowCtrl',
+    })
   ;
-
-
-
 
 }]);
 
