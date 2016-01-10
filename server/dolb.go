@@ -94,6 +94,7 @@ func New(config *Config) (*API, error) {
 	mux.Handle("/api/user", service.Handler{Config: config, F: UserRetrieveHandler}).Methods("GET")
 	mux.Handle(service.PingPath, service.Handler{Config: config, F: PingHandler}).Methods("POST")
 	mux.Handle("/api/lb/{lb_id}/services", service.Handler{Config: config, F: ServiceCreateHandler}).Methods("POST")
+	mux.Handle("/api/lb/{lb_id}/services", service.Handler{Config: config, F: ServiceListHandler}).Methods("GET")
 
 	return a, nil
 }

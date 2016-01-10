@@ -9,7 +9,10 @@
 
   <div class="row">
     <div class="col-md-8">
-      <h2>{{ lb.host }}</h2>
+      <h2>{{ lb.host }}
+        <span class="label"
+         ng-class="{'label-success': lbState('up'), 'label-warning': lbState('initializing'), 'label-danger': lbState('degraded')}">{{ lb.state }}</span>
+      </h2>
     </div>
   </div>
 
@@ -29,7 +32,22 @@
     </div>
 
     <div class="col-md-10" ui-view="">
-       
+      <table class="table">
+        <tr>
+          <th>Name</th>
+          <th>Port</th>
+          <th>Type</th>
+          <th>Matcher</th>
+          <th>Value</th>
+        </tr>
+        <tr ng-repeat="service in resp.services">
+          <td>{{ service.name }}</td>
+          <td>{{ service.port }}</td>
+          <td>{{ service.type }}</td>
+          <td>{{ service | getServiceMatcher }}</td>
+          <td>{{ service | getServiceValue }}</td>
+        </tr>
+      </table>
     </div>
   </div>
 

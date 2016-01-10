@@ -16,6 +16,15 @@
           $scope.canAddService = (val !== 'up');
         });
 
+        $http.get('/api/lb/' + $scope.lbID + '/services').
+          then(function(response) {
+            $scope.resp = response.data;
+            $log.debug($scope.resp);
+          }).
+          catch(function(e) {
+            $log.debug(e);
+          });
+
         var u = '/api/lb/' + $scope.lbID;
         $http.get(u)
           .success(function(res) {
@@ -24,6 +33,10 @@
           .error(function(res) {
             console.log('error: ' + JSON.stringify(res));
           });
+
+        $scope.lbState = function(state) {
+          return $scope.lb.state === state;
+        };
 
         $scope.addService = function() {
           $state.go('lb.add_service');
