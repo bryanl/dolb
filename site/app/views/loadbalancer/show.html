@@ -1,70 +1,30 @@
-<div class="container-fluid">
-
-
-  <div class="row">
-    <div class="col-md-8">
-      <h3>Load Balancer {{ lb.id }}
-        <span class="label"
-              ng-class="{'label-success': lbState('up'), 'label-warning': lbState('initializing'), 'label-danger': lbState('degraded')}">{{ lb.state }}</span>
-      </h3>
-    </div>
+<div class="row">
+<div class="col-md-2">
+  <div class="list-group">
+    <button class="list-group-item" ng-click="addService()" ng-disabled="canAddService" ng-class="{disabled: canAddService}">
+      <span class="glyphicon glyphicon-plus" aria-hidden=true"></span>&nbsp;Add Service
+    </button>
   </div>
-
-  <div class="row">
-    <div class="col-md-8">
-      <ul class="list-inline">
-        <li><strong>Region</strong> {{ lb.region }}</li>
-        <li><strong>Host</strong> {{ lb.host }}</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-12">
-      <h3>Services</h3>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-2">
-      <div class="list-group">
-        <button class="list-group-item" ng-click="addService()" ng-disabled="canAddService" ng-class="{disabled: canAddService}">
-          <span class="glyphicon glyphicon-plus" aria-hidden=true"></span>&nbsp;Add Service
-        </button>
-      </div>
-    </div>
-
-    <div class="col-md-10" ui-view="">
-      <table class="table">
-        <tr>
-          <th>Name</th>
-          <th>Port</th>
-          <th>Type</th>
-          <th>Matcher</th>
-          <th>Value</th>
-        </tr>
-        <tr ng-repeat="service in resp.services">
-          <td>
-            <a ui-sref="lb.service({lbID: lb.id, serviceID: service.name})">{{ service.name }}</a>
-          </td>
-          <td>{{ service.port }}</td>
-          <td>{{ service.type }}</td>
-          <td>{{ service | getServiceMatcher }}</td>
-          <td>{{ service | getServiceValue }}</td>
-        </tr>
-      </table>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-12">
-      <div class="well">
-        <div class="btn-group btn-group-sm" role="group">
-          <button type="button" class="btn btn-danger" ng-click="deleteLB()" ng-disabled="deleteDisabled()">Delete</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
+<div class="col-md-10">
+  <table class="table">
+    <tr>
+      <th>Name</th>
+      <th>Port</th>
+      <th>Type</th>
+      <th>Matcher</th>
+      <th>Value</th>
+    </tr>
+    <tr ng-repeat="service in resp.services">
+      <td>
+        <a ui-sref="lb.service({lbID: lb.id, serviceID: service.name})">{{ service.name }}</a>
+      </td>
+      <td>{{ service.port }}</td>
+      <td>{{ service.type }}</td>
+      <td>{{ service | getServiceMatcher }}</td>
+      <td>{{ service | getServiceValue }}</td>
+    </tr>
+  </table>
+</div>
+</div>

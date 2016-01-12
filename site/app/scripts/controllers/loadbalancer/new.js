@@ -47,7 +47,7 @@
           $http.post('/api/lb', bootstrapConfig, {}).
             then(function(response) {
               $scope.creating = false;
-              $state.go("lb", {lbID: response.data['load_balancer'].id}); // jshint ignore:line
+              $state.go("lb.show", {lbID: response.data['load_balancer'].id}); // jshint ignore:line
             }).
             catch(function(e) {
               $log.debug(e);

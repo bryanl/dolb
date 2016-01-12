@@ -16,7 +16,7 @@
           <th>state</th>
         </tr>
         <tr ng-repeat="lb in lbs.load_balancers">
-          <td class="col-md-2"><a ui-sref="lb({lbID: lb.id })">{{ lb.id }}</a></td>
+          <td class="col-md-2"><a ui-sref="lb.show({lbID: lb.id })">{{ lb.id }}</a></td>
           <td>{{ lb.name }}</td>
           <td>{{ lb.host }}</td>
           <td class="col-md-1">{{ lb.region }}</td>

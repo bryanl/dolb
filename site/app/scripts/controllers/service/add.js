@@ -16,7 +16,7 @@
             $log.debug('creating service: ' + JSON.stringify($scope.serviceForm));
             $http.post('/api/lb/' + $stateParams.lbID + '/services', $scope.serviceForm, {}).
               then(function() {
-                $state.go('lb', {lbID: $stateParams.lbID});
+                $state.go('lb.show', {lbID: $stateParams.lbID});
               }).
             catch(function(e) {
               $log.debug(e);

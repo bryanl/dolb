@@ -39,6 +39,13 @@ app.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $ur
 
     .state('lb', {
       url: '/lb/{lbID}',
+      abstract: true,
+      templateUrl: 'views/loadbalancer/home.html',
+      controller: 'LBHomeCtrl',
+    })
+
+    .state('lb.show', {
+      url: '',
       templateUrl: 'views/loadbalancer/show.html',
       controller: 'LBShowCtrl',
     })
@@ -50,7 +57,7 @@ app.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $ur
 
     .state('lb.service', {
       url: '/service/{serviceID}',
-      teplateUrl: 'views/service/show.html',
+      templateUrl: 'views/service/show.html',
       controller: 'ServiceShowCtrl',
     })
   ;
