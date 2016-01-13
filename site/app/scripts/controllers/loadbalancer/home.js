@@ -3,23 +3,23 @@
 
   angular.module('siteApp')
     .controller('LBHomeCtrl', 
-        ['$scope', '$http', '$stateParams', '$log',
-          function ($scope, $http, $stateParams, $log) {
+        ['$scope', '$http', '$stateParams', '$log', '$filter', 'LoadBalancerService', '$state',
+          function ($scope, $http, $stateParams, $log, $filter, LoadBalancerService, $state) {
             $log.debug('currentState:' + JSON.stringify($stateParams)); 
 
-            $scope.lbID = $stateParams.lbID;
             $scope.lb = {};
 
-            var u = '/api/lb/' + $scope.lbID;
-            $http.get(u)
-              .success(function(res) {
-                $scope.lb = res;
-              })
-            .error(function(res) {
-              console.log('error: ' + JSON.stringify(res));
+            $scope.lbID = $stateParams.lbID;
+
+            LoadBalancerService.LoadAll().then(function(data) {
+              $scope.lb = $filter('getLbByID')(data.load_balancers, $scope.lbID);
             });
 
+
             $scope.lbState = function(state) {
+              if ($scope.lb === undefined) {
+                return false;
+              }
               return $scope.lb.state === state;
             };
 

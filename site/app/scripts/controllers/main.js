@@ -2,7 +2,7 @@
   'use strict';
 
   angular.module('siteApp')
-    .controller('MainCtrl', function ($scope, $cookies, $window, session, $http) {
+    .controller('MainCtrl', function ($scope, $cookies, $window, session, $http, LoadBalancerService) {
 
       var sessionVar = $cookies.get('_dolb_session');
       if (!sessionVar) {
@@ -11,14 +11,13 @@
       } 
 
       session.then(function() {
-        $http.get('/api/lb')
-          .success(function(res) {
-            $scope.lbs=res;
-            console.log($scope.lbs);
-          })
-          .error(function() {
-            $scope.lbs={'error': 'could not retrieve load balancers'};
-          });
+        $scope.lbs = [];
+
+        LoadBalancerService.LoadAll().then(function(lbs) {
+          $scope.lbs = lbs;
+        }, function() {
+          console.log('load all failed');
+        });
       }, function() {
         console.log('looks like login failed');
       });

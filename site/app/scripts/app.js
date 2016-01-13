@@ -111,3 +111,27 @@ app.factory('httpHandler', ['$q', function($q) {
 
   return interceptor;
 }]);
+
+app.factory('LoadBalancerService', ['$q', '$http', '$log', function($q, $http, $log) {
+  var all = [];
+
+  var deferred = $q.defer();
+  $http.get('/api/lb').then(function(res) {
+    $log.debug(res);
+    deferred.resolve(res.data);
+    all = res.data;
+  }, function(res) {
+    $log.debug(res);
+    deferred.reject(res);
+  });
+
+  return {
+    LoadAll: function() {
+      return deferred.promise;
+    },
+    GetAll: function()  {
+      return all;
+    },
+  };
+
+}]);

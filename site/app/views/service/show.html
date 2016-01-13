@@ -1,7 +1,22 @@
 <div class="container-fluid">
 <div class="row">
   <div class="col-md-12">
-    what's up?
+    <table class="table">
+      <tr>
+        <th>Name</th>
+        <th>Port</th>
+        <th>Type</th>
+        <th>Matcher</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>{{ service.name }}</td>
+        <td>{{ service.port }}</td>
+        <td>{{ service.type }}</td>
+        <td>{{ service | getServiceMatcher }}</td>
+        <td>{{ service | getServiceValue }}</td>
+      </tr>
+    </table>
   </div>
 </div>
 </div>
