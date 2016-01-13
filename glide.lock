@@ -1,5 +1,5 @@
-hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2016-01-10T18:18:41.630578668-05:00
+hash: 50a5b5441e1785f0ae17dbd1dc09412e12d42d977aa27e593af391876d758975
+updated: 2016-01-13T09:35:48.072124192-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -95,6 +95,8 @@ imports:
   version: 72f9bd7c4e0c2a40055ab3d0f09654f730cce982
 - name: github.com/jteeuwen/go-bindata
   version: a0ff2567cfb70903282db057e799fd826784d41d
+- name: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
 - name: github.com/julienschmidt/httprouter
   version: f30ab90cccbd5171771d26b6557d3c2f49e047a6
 - name: github.com/kisielk/sqlstruct
@@ -164,6 +166,10 @@ imports:
   version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
 - name: github.com/Sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
+- name: github.com/smartystreets/assertions
+  version: edb6e295a22c57a2aa353b2f0729b6eff9f9f4b7
+- name: github.com/smartystreets/goconvey
+  version: a2d5d788f3afbce0989463251ccc5492fad832df
 - name: github.com/spacejam/loghisto
   version: 323309774dec8b7430187e46cd0793974ccca04a
 - name: github.com/spf13/cast

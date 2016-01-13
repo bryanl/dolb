@@ -1,35 +1,23 @@
-package firewall_test
+package firewall
 
 import (
-	. "github.com/bryanl/dolb/firewall"
+	"testing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
-var _ = Describe("IptablesState", func() {
+func TestIptablesState(t *testing.T) {
+	Convey("reading state", t, func() {
+		is, err := NewIptablesState(state)
+		So(err, ShouldBeNil)
 
-	Describe("reading state", func() {
+		rules, err := is.Rules()
+		So(err, ShouldBeNil)
 
-		var (
-			is  *IptablesState
-			err error
-		)
-
-		BeforeEach(func() {
-			is, err = NewIptablesState(state)
-			Ω(err).ToNot(HaveOccurred())
-		})
-
-		It("has 1 applicable rule", func() {
-			rules, err := is.Rules()
-			Ω(err).ToNot(HaveOccurred())
-
-			Ω(len(rules)).To(Equal(1))
-			Ω(rules[0].Destination).To(Equal(8889))
-		})
+		So(rules, ShouldHaveLength, 1)
+		So(rules[0].Destination, ShouldEqual, 8889)
 	})
-})
+}
 
 var state = `Chain Firewall-INPUT (2 references)
 num  target     prot opt source               destination         

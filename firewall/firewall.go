@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	// IptablesCmd is the iptables bin location.
-	IptablesCmd = "/sbin/iptables"
+	iptableRuleRe = regexp.MustCompile(`^(\d+).*?ACCEPT.*?dpt:(\d+)`)
 )
 
 // PortExistsError is an error when an iptables definition exists for a port.
@@ -34,23 +33,22 @@ type Firewall interface {
 // IptablesFirewall manages iptables firewalls.
 type IptablesFirewall struct {
 	log *logrus.Entry
-	ef  ExecFactory
+	ic  IptablesCommand
 }
 
 var _ Firewall = &IptablesFirewall{}
 
 // NewIptablesFirewall creates an instance of IptablesFirewall.
-func NewIptablesFirewall(ef ExecFactory, log *logrus.Entry) *IptablesFirewall {
+func NewIptablesFirewall(ic IptablesCommand, log *logrus.Entry) *IptablesFirewall {
 	return &IptablesFirewall{
 		log: log,
-		ef:  ef,
+		ic:  ic,
 	}
 }
 
 // State is current state of the firewall.
 func (f *IptablesFirewall) State() (State, error) {
-	c := f.ef.NewCmd(IptablesCmd, "-nL", "Firewall-INPUT", "--line-numbers")
-	out, err := c.Exec()
+	out, err := f.ic.ListRules()
 	if err != nil {
 		return nil, err
 	}
@@ -65,34 +63,17 @@ func (f *IptablesFirewall) Open(port int) error {
 		return &PortExistsError{Port: port}
 	}
 
-	c := f.ef.NewCmd(IptablesCmd, f.tcpOpts(port)...)
-	_, err = c.Exec()
-	return err
-}
-
-func (f *IptablesFirewall) tcpOpts(port int) []string {
-	portStr := strconv.Itoa(port)
-	return []string{
-		"-I", "Firewall-INPUT", "1",
-		"-m", "conntrack",
-		"--ctstate", "NEW",
-		"-p", "tcp",
-		"--dport", portStr,
-		"-j", "ACCEPT",
-	}
+	return f.ic.PrependRule(port)
 }
 
 // Close closes a port on the firewall.
 func (f *IptablesFirewall) Close(port int) error {
-	rule, err := f.findRuleByPort(port)
+	_, err := f.findRuleByPort(port)
 	if err != nil {
 		return err
 	}
 
-	c := f.ef.NewCmd(IptablesCmd, f.closeOpts(*rule)...)
-	_, err = c.Exec()
-
-	return err
+	return f.ic.RemoveRule(port)
 }
 
 func (f *IptablesFirewall) findRuleByPort(port int) (*Rule, error) {
@@ -115,14 +96,6 @@ func (f *IptablesFirewall) findRuleByPort(port int) (*Rule, error) {
 	return nil, fmt.Errorf("unable to find port %d in iptables", port)
 }
 
-func (f *IptablesFirewall) closeOpts(rule Rule) []string {
-	ruleNo := strconv.Itoa(rule.RuleNumber)
-
-	return []string{
-		"-D", "Firewall-INPUT", ruleNo,
-	}
-}
-
 // State is interface for returning firewall rules.
 type State interface {
 	Rules() ([]Rule, error)
@@ -138,14 +111,9 @@ var _ State = &IptablesState{}
 
 // NewIptablesState creates an instance of IptablesState.
 func NewIptablesState(in string) (*IptablesState, error) {
-	r, err := regexp.Compile(`^(\d+).*?ACCEPT.*?dpt:(\d+)`)
-	if err != nil {
-		return nil, err
-	}
-
 	return &IptablesState{
 		in:      in,
-		matcher: r,
+		matcher: iptableRuleRe,
 	}, nil
 }
 

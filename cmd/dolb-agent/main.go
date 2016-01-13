@@ -79,8 +79,8 @@ func main() {
 	logger := log.WithField("agent-name", *agentName)
 	config.SetLogger(logger)
 
-	ef := &firewall.LiveExecFactory{}
-	config.Firewall = firewall.NewIptablesFirewall(ef, logger)
+	ic := firewall.NewIptablesCommand()
+	config.Firewall = firewall.NewIptablesFirewall(ic, logger)
 
 	kapi, err := kvs.NewKeysAPI(*etcdEndpoints, nil)
 	if err != nil {
