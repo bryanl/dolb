@@ -2,21 +2,21 @@ package server
 
 import "github.com/stretchr/testify/mock"
 
-import "github.com/bryanl/dolb/dao"
+import "github.com/bryanl/dolb/entity"
 
 type MockLoadBalancerFactory struct {
 	mock.Mock
 }
 
-func (_m *MockLoadBalancerFactory) Build(bootstrapConfig *BootstrapConfig) (*dao.LoadBalancer, error) {
+func (_m *MockLoadBalancerFactory) Build(bootstrapConfig *BootstrapConfig) (*entity.LoadBalancer, error) {
 	ret := _m.Called(bootstrapConfig)
 
-	var r0 *dao.LoadBalancer
-	if rf, ok := ret.Get(0).(func(*BootstrapConfig) *dao.LoadBalancer); ok {
+	var r0 *entity.LoadBalancer
+	if rf, ok := ret.Get(0).(func(*BootstrapConfig) *entity.LoadBalancer); ok {
 		r0 = rf(bootstrapConfig)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*dao.LoadBalancer)
+			r0 = ret.Get(0).(*entity.LoadBalancer)
 		}
 	}
 

@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -11,7 +10,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-type LoadBalancerService struct{}
+type LoadBalancerService struct {
+	loadBalancerFactory LoadBalancerFactory
+}
 
 func (s *LoadBalancerService) Create(ctx context.Context, r *http.Request) service.Response {
 	defer r.Body.Close()
@@ -22,11 +23,7 @@ func (s *LoadBalancerService) Create(ctx context.Context, r *http.Request) servi
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
 	}
 
-	factory, ok := ctx.Value("loadBalancerFactory").(LoadBalancerFactory)
-	if !ok {
-		return service.Response{Body: errors.New("internal error"), Status: 500}
-	}
-
+	factory := s.loadBalancerFactory
 	lb, err := factory.Build(&bc)
 
 	if err != nil {

@@ -1,21 +1,24 @@
 package entity
 
-import "github.com/bryanl/dolb/server"
+// DB is the DOLB database object.
+type DB struct {
+}
 
+// Manager is an interface which manages entities. It loads and saves things from somewhere.
 type Manager interface {
-	CreateLoadBalancer(bc *server.BootstrapConfig) error
+	Save(item interface{}) error
 }
 
 type manager struct {
-	config *server.Config
 }
 
 var _ Manager = &manager{}
 
-func NewManager(config *server.Config) Manager {
-	return &manager{config: config}
+// NewManager creates an instance of Manager.
+func NewManager(db *DB) Manager {
+	return &manager{}
 }
 
-func (m *manager) CreateLoadBalancer(bc *server.BootstrapConfig) error {
+func (m *manager) Save(item interface{}) error {
 	return nil
 }

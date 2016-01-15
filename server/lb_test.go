@@ -8,77 +8,64 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/bryanl/dolb/dao"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/bryanl/dolb/entity"
 	"golang.org/x/net/context"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestCreateLoadBalancer(t *testing.T) {
 	Convey("Given a load balancer service", t, func() {
 		ctx := context.Background()
-		lbs := &LoadBalancerService{}
+		loadBalancerFactory := &MockLoadBalancerFactory{}
+		lbs := &LoadBalancerService{loadBalancerFactory: loadBalancerFactory}
 
-		Convey("Given a context with a load balancer factory", func() {
-			loadBalancerFactory := &MockLoadBalancerFactory{}
-			ctx = context.WithValue(ctx, "loadBalancerFactory", loadBalancerFactory)
+		Convey("When a valid request is made to create a load balancer", func() {
+			bc := BootstrapConfig{}
+			lb := &entity.LoadBalancer{}
 
-			Convey("When a valid request is made to create a load balancer", func() {
-				bc := BootstrapConfig{}
-				lb := &dao.LoadBalancer{}
+			loadBalancerFactory.On("Build", &bc).Return(lb, nil)
 
-				loadBalancerFactory.On("Build", &bc).Return(lb, nil)
+			reader := convertToJSONReader(bc)
+			r := performLBCreate(reader)
 
-				reader := convertToJSONReader(bc)
-				r := performLBCreate(reader)
+			response := lbs.Create(ctx, r)
 
-				response := lbs.Create(ctx, r)
-
-				Convey("It returns a 201 status", func() {
-					So(response.Status, ShouldEqual, 201)
-				})
-
-				Convey("It returns a load balancer", func() {
-					So(response.Body, ShouldHaveSameTypeAs, &dao.LoadBalancer{})
-				})
+			Convey("It returns a 201 status", func() {
+				So(response.Status, ShouldEqual, 201)
 			})
 
-			Convey("When an invalid request is made to create a load balancer", func() {
-				bc := BootstrapConfig{}
-
-				loadBalancerFactory.On("Build", &bc).Return(nil, errors.New("failure"))
-
-				reader := convertToJSONReader(bc)
-				r := performLBCreate(reader)
-
-				response := lbs.Create(ctx, r)
-
-				Convey("It returns a 400 status", func() {
-					So(response.Status, ShouldEqual, 400)
-				})
-			})
-
-			Convey("When invalid json is sent", func() {
-				var buf bytes.Buffer
-				buf.WriteString("broken")
-
-				r := performLBCreate(&buf)
-
-				response := lbs.Create(ctx, r)
-
-				Convey("It returns a 422 status", func() {
-					So(response.Status, ShouldEqual, 422)
-				})
+			Convey("It returns a load balancer", func() {
+				So(response.Body, ShouldHaveSameTypeAs, &entity.LoadBalancer{})
 			})
 		})
 
-		Convey("When a request is made to create a load balancer", func() {
+		Convey("When an invalid request is made to create a load balancer", func() {
 			bc := BootstrapConfig{}
+
+			loadBalancerFactory.On("Build", &bc).Return(nil, errors.New("failure"))
+
 			reader := convertToJSONReader(bc)
 			r := performLBCreate(reader)
+
 			response := lbs.Create(ctx, r)
 
-			Convey("It returns a server error", func() {
-				So(response.Status, ShouldEqual, 500)
+			Convey("It returns a 400 status", func() {
+				So(response.Status, ShouldEqual, 400)
+				loadBalancerFactory.AssertExpectations(t)
+			})
+		})
+
+		Convey("When invalid json is sent", func() {
+			var buf bytes.Buffer
+			buf.WriteString("broken")
+
+			r := performLBCreate(&buf)
+
+			response := lbs.Create(ctx, r)
+
+			Convey("It returns a 422 status", func() {
+				So(response.Status, ShouldEqual, 422)
 			})
 		})
 	})
