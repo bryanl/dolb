@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+echo $@ >> /tmp/fastgo.txt
+
+cmd=$1
+shift
+
+if [[ $cmd == "test" ]]; then
+  gt $@
+else
+  go $cmd $@
+fi
