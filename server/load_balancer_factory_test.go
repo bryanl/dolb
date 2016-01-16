@@ -44,7 +44,7 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 		}
 
 		Convey("When there are no cluster errors", func() {
-			mockEntityManager.On("Save", &newLB).Return(nil)
+			mockEntityManager.On("Create", &newLB).Return(nil)
 
 			mockCluster.On("Bootstrap", &newLB).Return(nil)
 
@@ -80,7 +80,7 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 		})
 
 		Convey("Unable to save load balancer", func() {
-			mockEntityManager.On("Save", &newLB).Return(errors.New("failure")).Once()
+			mockEntityManager.On("Create", &newLB).Return(errors.New("failure")).Once()
 
 			invalidLB := newLB
 			invalidLB.State = "invalid"

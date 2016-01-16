@@ -15,6 +15,7 @@ type DB struct {
 
 // Manager is an interface which manages entities. It loads and saves things from somewhere.
 type Manager interface {
+	Create(item interface{}) error
 	Save(item interface{}) error
 }
 
@@ -27,11 +28,14 @@ var _ Manager = &manager{}
 
 // NewManager creates an instance of Manager.
 func NewManager(db *DB) Manager {
-
 	return &manager{
 		psql: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 		dbx:  sqlx.NewDb(db.db, "postgres"),
 	}
+}
+
+func (m *manager) Create(item interface{}) error {
+	return nil
 }
 
 func (m *manager) Save(item interface{}) error {

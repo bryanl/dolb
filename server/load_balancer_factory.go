@@ -62,6 +62,11 @@ func (lbf *loadBalancerFactory) Build(bootstrapConfig *BootstrapConfig) (*entity
 		State: "initialized",
 	}
 
+	if err = em.Create(lb); err != nil {
+		lbf.logger.WithError(err).Error("unable to create load balancer")
+		return nil, err
+	}
+
 	defer func() {
 		if err != nil {
 			lb.State = "invalid"
@@ -70,11 +75,6 @@ func (lbf *loadBalancerFactory) Build(bootstrapConfig *BootstrapConfig) (*entity
 			}
 		}
 	}()
-
-	if err = em.Save(lb); err != nil {
-		lbf.logger.WithError(err).Error("unable to save load balancer")
-		return nil, err
-	}
 
 	if err := lbf.config.Cluster.Bootstrap(lb); err != nil {
 		lbf.logger.WithError(err).Error("unable to bootstrap load balancer cluster")
