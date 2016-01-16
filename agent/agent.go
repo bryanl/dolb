@@ -70,7 +70,7 @@ func pingServer(config *Config) error {
 	}
 
 	if resp.StatusCode != 201 {
-		config.logger.WithField("status-code", resp.StatusCode).Warning("unable to ping server")
+		config.logger.WithField("status-code", resp.StatusCode).Debug("unable to ping server")
 	}
 
 	config.logger.WithFields(log.Fields{

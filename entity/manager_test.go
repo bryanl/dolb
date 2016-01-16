@@ -19,6 +19,40 @@ func TestManager(t *testing.T) {
 		}
 		manager := NewManager(entityDB)
 
+		Convey("When creating a load balancer", func() {
+			lb := &LoadBalancer{
+				ID:                      "12345",
+				Name:                    "mylb",
+				Region:                  "dev0",
+				DigitaloceanAccessToken: "token",
+				State: "initializing",
+			}
+
+			mock.ExpectBegin()
+			mock.ExpectExec("INSERT INTO load_balancers").
+				WithArgs("12345", "mylb", "dev0", "token", "initializing").
+				WillReturnResult(sqlmock.NewResult(1, 1))
+			mock.ExpectCommit()
+
+			err := manager.Create(lb)
+
+			So(mock.ExpectationsWereMet(), ShouldBeNil)
+
+			Convey("It doesn't return an error", func() {
+				So(err, ShouldBeNil)
+			})
+		})
+
+		Convey("When creating an unknown entity", func() {
+
+			obj := struct{}{}
+			err := manager.Create(obj)
+
+			Convey("It returns an error", func() {
+				So(err, ShouldNotBeNil)
+			})
+		})
+
 		Convey("When saving a load balancer", func() {
 			lb := &LoadBalancer{
 				ID:                      "12345",

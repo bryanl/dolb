@@ -35,7 +35,28 @@ func NewManager(db *DB) Manager {
 }
 
 func (m *manager) Create(item interface{}) error {
-	return nil
+	switch t := item.(type) {
+	default:
+		return fmt.Errorf("unknown type %T", t)
+	case *LoadBalancer:
+		lb := item.(*LoadBalancer)
+		tx, err := m.dbx.Begin()
+		if err != nil {
+			return err
+		}
+
+		_, err = m.psql.Insert("load_balancers").
+			Columns("id", "name", "region", "do_token", "state").
+			Values(lb.ID, lb.Name, lb.Region, lb.DigitaloceanAccessToken, lb.State).
+			RunWith(m.dbx.DB).Exec()
+
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return tx.Commit()
+	}
 }
 
 func (m *manager) Save(item interface{}) error {
@@ -44,7 +65,7 @@ func (m *manager) Save(item interface{}) error {
 		return fmt.Errorf("unknown type %T", t)
 	case *LoadBalancer:
 		lb := item.(*LoadBalancer)
-		tx, err := m.dbx.DB.Begin()
+		tx, err := m.dbx.Begin()
 		if err != nil {
 			return err
 		}
