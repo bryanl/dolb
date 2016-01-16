@@ -66,7 +66,7 @@ func (lbf *loadBalancerFactory) Build(bootstrapConfig *BootstrapConfig) (*entity
 		if err != nil {
 			lb.State = "invalid"
 			if serr := em.Save(lb); serr != nil {
-				lbf.logger.WithError(err).Error("unable to move load balancer state to invalid")
+				lbf.logger.WithError(err).Error("unable to change load balancer state to invalid")
 			}
 		}
 	}()
