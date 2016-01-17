@@ -7,6 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/pkg/app"
 )
 
 const (
@@ -20,37 +21,15 @@ var (
 type userDataConfig struct {
 	AgentVersion    string
 	AgentID         string
-	BootstrapConfig *BootstrapConfig
+	BootstrapConfig *app.BootstrapConfig
 	ClusterID       string
 	CoreosToken     string
 	ServerURL       string
 }
 
-// BootstrapConfig is configuration for Bootstrap.
-type BootstrapConfig struct {
-	DigitalOceanToken string   `json:"digitalocean_token"`
-	Name              string   `json:"name"`
-	Region            string   `json:"region"`
-	SSHKeys           []string `json:"ssh_keys"`
-
-	RemoteSyslog *RemoteSyslog `json:"remote_syslog"`
-}
-
-// HasSyslog returns if a BootstrapConfig has a syslog configuration.
-func (bc *BootstrapConfig) HasSyslog() bool {
-	return bc.RemoteSyslog != nil
-}
-
-// RemoteSyslog is a remote syslog server configuration.
-type RemoteSyslog struct {
-	EnableSSL bool   `json:"enable_ssl"`
-	Host      string `json:"host"`
-	Port      int    `json:"port"`
-}
-
 // BootstrapOptions are options for the bootstrap process.
 type BootstrapOptions struct {
-	BootstrapConfig *BootstrapConfig
+	BootstrapConfig *app.BootstrapConfig
 	LoadBalancer    *dao.LoadBalancer
 	Config          *Config
 }

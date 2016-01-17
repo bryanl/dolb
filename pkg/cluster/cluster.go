@@ -1,19 +1,21 @@
 package cluster
 
-import "github.com/bryanl/dolb/entity"
+import (
+	"github.com/bryanl/dolb/entity"
+	"github.com/bryanl/dolb/pkg/app"
+)
 
-type Cluster interface {
-	Bootstrap(lb *entity.LoadBalancer) error
+// Cluster managements load balancer agent clusters.
+type Cluster struct{}
+
+var _ app.Cluster = &Cluster{}
+
+// New builds a cluster.
+func New() app.Cluster {
+	return &Cluster{}
 }
 
-type cluster struct{}
-
-var _ Cluster = &cluster{}
-
-func NewCluster() Cluster {
-	return &cluster{}
-}
-
-func (c cluster) Bootstrap(lb *entity.LoadBalancer) error {
+// Bootstrap bootstraps an agent cluster.
+func (c Cluster) Bootstrap(lb *entity.LoadBalancer) error {
 	return nil
 }

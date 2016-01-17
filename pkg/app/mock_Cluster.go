@@ -1,4 +1,4 @@
-package cluster
+package app
 
 import "github.com/stretchr/testify/mock"
 

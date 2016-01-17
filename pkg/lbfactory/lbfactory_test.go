@@ -1,14 +1,12 @@
-package server
+package lbfactory
 
 import (
 	"errors"
 	"testing"
 
-	"golang.org/x/net/context"
-
 	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/kvs"
-	"github.com/bryanl/dolb/pkg/cluster"
+	"github.com/bryanl/dolb/pkg/app"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -17,19 +15,12 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 	Convey("Given a LoadBalancerFactory", t, func() {
 		mockEntityManager := &entity.MockManager{}
 		mockKVS := &kvs.MockKVS{}
-		mockCluster := &cluster.MockCluster{}
+		mockCluster := &app.MockCluster{}
 
-		ctx := context.Background()
-		config := &LoadBalancerFactoryConfig{
-			Context:          ctx,
-			EntityManager:    mockEntityManager,
-			KVS:              mockKVS,
-			Cluster:          mockCluster,
-			GenerateRandomID: func() string { return "12345" },
-		}
-		lbf := NewLoadBalancerFactory(config)
+		idGen := func() string { return "12345" }
+		lbf := New(mockKVS, mockEntityManager, Cluster(mockCluster), GenerateRandomID(idGen))
 
-		bootStrapConfig := &BootstrapConfig{
+		bootStrapConfig := &app.BootstrapConfig{
 			Name:              "mylb",
 			Region:            "dev0",
 			DigitalOceanToken: "token",
@@ -96,7 +87,7 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 		Reset(func() {
 			mockEntityManager = &entity.MockManager{}
 			mockKVS = &kvs.MockKVS{}
-			mockCluster = &cluster.MockCluster{}
+			mockCluster = &app.MockCluster{}
 		})
 	})
 }

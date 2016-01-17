@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/dolb/entity"
+	"github.com/bryanl/dolb/pkg/app"
 	"golang.org/x/net/context"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -18,10 +19,14 @@ func TestCreateLoadBalancer(t *testing.T) {
 	Convey("Given a load balancer service", t, func() {
 		ctx := context.Background()
 		loadBalancerFactory := &MockLoadBalancerFactory{}
-		lbs := &LoadBalancerService{loadBalancerFactory: loadBalancerFactory}
+		lbfFn := func() app.LoadBalancerFactory {
+			return loadBalancerFactory
+		}
+		lbs, err := NewLoadBalancerService(LBFactoryFn(lbfFn))
+		So(err, ShouldBeNil)
 
 		Convey("When a valid request is made to create a load balancer", func() {
-			bc := BootstrapConfig{}
+			bc := app.BootstrapConfig{}
 			lb := &entity.LoadBalancer{}
 
 			loadBalancerFactory.On("Build", &bc).Return(lb, nil)
@@ -41,7 +46,7 @@ func TestCreateLoadBalancer(t *testing.T) {
 		})
 
 		Convey("When an invalid request is made to create a load balancer", func() {
-			bc := BootstrapConfig{}
+			bc := app.BootstrapConfig{}
 
 			loadBalancerFactory.On("Build", &bc).Return(nil, errors.New("failure"))
 

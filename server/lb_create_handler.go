@@ -7,6 +7,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/pkg/app"
 	"github.com/bryanl/dolb/service"
 )
 
@@ -20,7 +21,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 	config := c.(*Config)
 	defer r.Body.Close()
 
-	var bc BootstrapConfig
+	var bc app.BootstrapConfig
 	err := json.NewDecoder(r.Body).Decode(&bc)
 	if err != nil {
 		return service.Response{Body: fmt.Errorf("could not decode json: %v", err), Status: 422}
@@ -39,7 +40,7 @@ func LBCreateHandler(c interface{}, r *http.Request) service.Response {
 }
 
 // CreateLoadBalancer creates a load balancer.
-func CreateLoadBalancer(bc BootstrapConfig, config *Config) (*dao.LoadBalancer, error) {
+func CreateLoadBalancer(bc app.BootstrapConfig, config *Config) (*dao.LoadBalancer, error) {
 	if bc.DigitalOceanToken == "" {
 		return nil, fmt.Errorf("DigitalOcean token is required")
 	}
