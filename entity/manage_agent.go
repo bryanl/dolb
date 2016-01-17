@@ -20,8 +20,8 @@ func (em *manageAgent) create(item interface{}) error {
 	}
 
 	_, err = em.psql.Insert("agents").
-		Columns("id", "cluster_id", "droplet_id", "droplet_name", "dns_id", "last_seen_at").
-		Values(agent.ID, agent.ClusterID, agent.DropletID, agent.DropletName, agent.DNSID, agent.LastSeenAt).
+		Columns("id", "cluster_id", "region", "droplet_id", "droplet_name", "dns_id", "last_seen_at").
+		Values(agent.ID, agent.ClusterID, agent.Region, agent.DropletID, agent.DropletName, agent.DNSID, agent.LastSeenAt).
 		RunWith(em.dbx.DB).Exec()
 
 	if err != nil {
@@ -45,6 +45,7 @@ func (em *manageAgent) save(item interface{}) error {
 
 	_, err = em.psql.Update("agents").
 		Set("cluster_id", agent.ClusterID).
+		Set("region", agent.Region).
 		Set("droplet_id", agent.DropletID).
 		Set("droplet_name", agent.DropletName).
 		Set("dns_id", agent.DNSID).

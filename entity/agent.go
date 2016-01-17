@@ -6,6 +6,7 @@ import "time"
 type Agent struct {
 	ID          string
 	ClusterID   string
+	Region      string
 	DropletID   int
 	DropletName string
 	DNSID       int

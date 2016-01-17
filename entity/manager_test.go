@@ -25,6 +25,7 @@ func TestManager(t *testing.T) {
 			agent := &Agent{
 				ID:          "1",
 				ClusterID:   "12345",
+				Region:      "dev0",
 				DropletID:   1,
 				DropletName: "agent1",
 				DNSID:       1,
@@ -34,7 +35,7 @@ func TestManager(t *testing.T) {
 			Convey("When creating an agent", func() {
 				mock.ExpectBegin()
 				mock.ExpectExec("INSERT INTO agents").
-					WithArgs("1", "12345", 1, "agent1", 1, now).
+					WithArgs("1", "12345", "dev0", 1, "agent1", 1, now).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 
@@ -50,7 +51,7 @@ func TestManager(t *testing.T) {
 			Convey("When updating an agent", func() {
 				mock.ExpectBegin()
 				mock.ExpectExec("UPDATE agents").
-					WithArgs("12345", 1, "agent1", 1, now, "1").
+					WithArgs("12345", "dev0", 1, "agent1", 1, now, "1").
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 
