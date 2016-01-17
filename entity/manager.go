@@ -35,54 +35,34 @@ func NewManager(db *DB) Manager {
 }
 
 func (m *manager) Create(item interface{}) error {
+	var em entityManager
 	switch t := item.(type) {
 	default:
 		return fmt.Errorf("unknown type %T", t)
 	case *LoadBalancer:
-		lb := item.(*LoadBalancer)
-		tx, err := m.dbx.Begin()
-		if err != nil {
-			return err
-		}
-
-		_, err = m.psql.Insert("load_balancers").
-			Columns("id", "name", "region", "do_token", "state").
-			Values(lb.ID, lb.Name, lb.Region, lb.DigitaloceanAccessToken, lb.State).
-			RunWith(m.dbx.DB).Exec()
-
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		return tx.Commit()
+		em = &manageLoadBalancer{m}
+	case *Agent:
+		em = &manageAgent{m}
 	}
+
+	return em.create(item)
 }
 
 func (m *manager) Save(item interface{}) error {
+	var em entityManager
 	switch t := item.(type) {
 	default:
 		return fmt.Errorf("unknown type %T", t)
 	case *LoadBalancer:
-		lb := item.(*LoadBalancer)
-		tx, err := m.dbx.Begin()
-		if err != nil {
-			return err
-		}
-
-		_, err = m.psql.Update("load_balancers").
-			Set("name", lb.Name).
-			Set("region", lb.Region).
-			Set("do_token", lb.DigitaloceanAccessToken).
-			Set("state", lb.State).
-			Where("id = ?", lb.ID).
-			RunWith(m.dbx.DB).Exec()
-
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		return tx.Commit()
+		em = &manageLoadBalancer{m}
+	case *Agent:
+		em = &manageAgent{m}
 	}
+
+	return em.save(item)
+}
+
+type entityManager interface {
+	create(interface{}) error
+	save(interface{}) error
 }
