@@ -1,5 +1,5 @@
-hash: 50a5b5441e1785f0ae17dbd1dc09412e12d42d977aa27e593af391876d758975
-updated: 2016-01-13T09:35:48.072124192-05:00
+hash: dc5ee2315f1176780c1629c768ea3860c336effefb4f9159e15c19b83403af58
+updated: 2016-01-16T22:26:31.545648524-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c
@@ -18,15 +18,18 @@ imports:
 - name: github.com/bradfitz/http2
   version: 3e36af6d3af0e56fa3da71099f864933dea3d9fb
 - name: github.com/BurntSushi/toml
-  version: 056c9bc7be7190eaa7715723883caffa5f8fa3e4
+  version: 5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e
 - name: github.com/cheggaaa/pb
   version: da1f27ad1d9509b16f65f52fd9d8138b0f2dc7b2
 - name: github.com/codegangsta/cli
   version: b5232bb2934f606f9f27a1305f1eea224e8e8b88
 - name: github.com/codegangsta/negroni
   version: c7477ad8e330bef55bf1ebe300cf8aa67c492d1b
+  repo: https://github.com/codegangsta/negroni
 - name: github.com/coreos/etcd
-  version: f1761798e9a25a5ce466305862c68ad0ceb877ae
+  version: 22dd738228b60c5d55ce7a0f8fc0499ae9911910
+- name: github.com/coreos/gexpect
+  version: 5173270e159f5aa8fbc999dc7e3dcb50f4098a69
 - name: github.com/coreos/go-etcd
   version: 003851be7bb0694fe3cc457a49529a19388ee7cf
 - name: github.com/coreos/go-semver
@@ -52,19 +55,18 @@ imports:
 - name: github.com/fatih/color
   version: 9aae6aaa22315390f03959adca2c4d395b02fcef
 - name: github.com/go-sql-driver/mysql
-  version: d512f204a577a4ab037a1816604c48c9c13210be
+  version: 6fd058ce0d6b7ee43174e80d5a3e7f483c4dfbe5
 - name: github.com/gocql/gocql
-  version: 4e6e2f58992fd43cc61e16faf0e58e179480857a
+  version: a22932256a22b5a85b3efb9829d75a3909a782f2
 - name: github.com/godbus/dbus
-  version: a1b8ba5163b7f041b22761461eabd02b70d1f824
+  version: e4593d66e29678c26f84166fe231a03e0268ced5
+  repo: https://github.com/godbus/dbus
 - name: github.com/gogo/protobuf
   version: 64f27bf06efee53589314a6e5a4af34cdd85adf6
   subpackages:
   - proto
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
-- name: github.com/golang/protobuf
-  version: 5677a0e3d5e89854c9974e1256839ee23f8233ca
 - name: github.com/golang/snappy
   version: 723cc1e459b8eea2dea4583200fd60757d40097a
 - name: github.com/google/btree
@@ -74,7 +76,7 @@ imports:
 - name: github.com/gorilla/context
   version: 1c83b3eabd45b6d76072b66b746c20815fb2872d
 - name: github.com/gorilla/mux
-  version: 2aad27d3101b8183f8fa1bebdbc2cdb74fcef090
+  version: 26a6070f849969ba72b72256e9f14cf519751690
 - name: github.com/gorilla/pat
   version: e3ceaad21981965be815a74ec833802d74e52947
 - name: github.com/gorilla/securecookie
@@ -90,7 +92,7 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jmoiron/sqlx
-  version: 54aec3fd91a2b2129ffaca0d652b8a9223ee2d9e
+  version: 5978a4ef08e4ddae6983d82b9166353fe21c6600
 - name: github.com/jonboulle/clockwork
   version: 72f9bd7c4e0c2a40055ab3d0f09654f730cce982
 - name: github.com/jteeuwen/go-bindata
@@ -98,9 +100,13 @@ imports:
 - name: github.com/jtolds/gls
   version: 8ddce2a84170772b95dd5d576c48d517b22cac63
 - name: github.com/julienschmidt/httprouter
-  version: f30ab90cccbd5171771d26b6557d3c2f49e047a6
+  version: 21439ef4d70ba4f3e2a5ed9249e7b03af4019b40
+  repo: https://github.com/julienschmidt/httprouter
+- name: github.com/kballard/go-shellquote
+  version: d8ec1a69a250a17bb0e419c386eac1f3711dc142
 - name: github.com/kisielk/sqlstruct
   version: 648daed35d49dac24a4bff253b190a80da3ab6a5
+  repo: https://github.com/kisielk/sqlstruct
 - name: github.com/kr/pretty
   version: e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb
 - name: github.com/kr/pty
@@ -112,7 +118,7 @@ imports:
 - name: github.com/lann/ps
   version: 62de8c46ede02a7675c4c79c84883eb164cb71e3
 - name: github.com/lib/pq
-  version: 11fc39a580a008f1f39bb3d11d984fb34ed778d9
+  version: 8ad2b298cadd691a77015666a5372eae5dbfac8f
 - name: github.com/magiconair/properties
   version: c81f9d71af8f8cba1466501d30326b99a4e56c19
 - name: github.com/markbates/goth
@@ -122,13 +128,13 @@ imports:
 - name: github.com/Masterminds/structable
   version: 37cf1c703d73e8175cf9cee44bbb2fc9d7b0e4e8
 - name: github.com/mattes/migrate
-  version: 602888252929b4290c98a89956877e4f9bb033cc
+  version: 5593c9892be3cb5e41da0068809ae2a4a7c0724f
 - name: github.com/mattn/go-colorable
   version: 3dac7b4f76f6e17fb39b768b89e3783d16e237fe
 - name: github.com/mattn/go-isatty
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
 - name: github.com/mattn/go-sqlite3
-  version: 5651a9d9d49ec25811d08220ee972080378d52ea
+  version: 5510da399572b4962c020184bb291120c0a412e2
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -177,13 +183,13 @@ imports:
 - name: github.com/spf13/cobra
   version: 1c44ec8d3f1552cac48999f9306da23c4d8a288b
 - name: github.com/spf13/jwalterweatherman
-  version: c2aa07df593850a04644d77bb757d002e517a296
+  version: d00654080cddbd2b082acaa74007cb94a2b40866
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/spf13/viper
-  version: 110492b3001269a0777997fcbe68a60828fac4cb
+  version: a212099cbe6fbe8d07476bfda8d2d39b6ff8f325
 - name: github.com/stretchr/graceful
-  version: 48afeb21e2fcbcff0f30bd5ad6b97747b0fae38e
+  version: 119c58e176bce26fd40698146d9a106c8f1723a5
 - name: github.com/stretchr/objx
   version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
@@ -193,7 +199,7 @@ imports:
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: github.com/tylerb/graceful
-  version: 48afeb21e2fcbcff0f30bd5ad6b97747b0fae38e
+  version: 119c58e176bce26fd40698146d9a106c8f1723a5
 - name: github.com/ugorji/go
   version: f1f1a805ed361a0e078bb537e4ea78cd37dcf065
   subpackages:
@@ -201,16 +207,13 @@ imports:
 - name: github.com/vektra/errors
   version: c64d83aba85aa4392895aadeefabbd24e89f3580
 - name: github.com/vektra/mockery
-  version: 6f106ca84af871afc7c8e6aaf3de0fcc5e7a57e6
+  version: 47a058062601e235731714f89d7ec95c1ec47a5e
 - name: github.com/xiang90/probing
   version: 6a0cc1ae81b4cc11db5e491e030e4b98fba79c19
 - name: github.com/xordataexchange/crypt
   version: 749e360c8f236773f28fc6d3ddfce4a470795227
 - name: golang.org/x/crypto
   version: 1351f936d976c60a0a48d728281922cf63eafb8d
-  subpackages:
-  - bcrypt
-  - blowfish
 - name: golang.org/x/net
   version: 7dbad50ab5b31073856416cdcfeb2796d682f844
 - name: golang.org/x/oauth2
@@ -221,33 +224,29 @@ imports:
   - unix
 - name: golang.org/x/text
   version: cf4986612c83df6c55578ba198316d1684a9a287
+  repo: https://golang.org/x/text
 - name: golang.org/x/tools
-  version: 157f8abbbd7c19e90432c72cb6216cf0b9324c55
-- name: google.golang.org/api
-  version: dc6d2353af16e2a2b0ff6986af051d473a4ed468
-- name: google.golang.org/appengine
-  version: 58c0e2a2044a8d1abd8dd1d97939cd74497d0806
-- name: google.golang.org/cloud
-  version: f20d6dcccb44ed49de45ae3703312cb46e627db1
-  subpackages:
-  - compute/metadata
-  - internal
+  version: 3c782264fbde3108fd1eae9abcc4015edfd79e65
 - name: google.golang.org/grpc
   version: f5ebd86be717593ab029545492c93ddf8914832b
 - name: gopkg.in/airbrake/gobrake.v2
   version: c9d51adc624b5cc4c1bf8de730a09af4878ffe2d
+  repo: https://gopkg.in/airbrake/gobrake.v2
 - name: gopkg.in/DATA-DOG/go-sqlmock.v1
   version: febff80c09712044459f72847e56aaa69c9dad3b
 - name: gopkg.in/fsnotify.v1
-  version: 508915b7500b6e42a87132e4afeb4729cebc7cbb
+  version: 8611c35ab31c1c28aa903d33cf8b6e44a399b09e
+  repo: https://gopkg.in/fsnotify.v1
 - name: gopkg.in/gemnasium/logrus-airbrake-hook.v2
   version: 31e6fd4bd5a98d8ee7673d24bc54ec73c31810dd
+  repo: https://gopkg.in/gemnasium/logrus-airbrake-hook.v2
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/Masterminds/squirrel.v1
   version: 1f8a6e983e7a153765cf26564d87cfb966da67c2
 - name: gopkg.in/yaml.v1
   version: 9f9df34309c04878acc86042b16630b0f696e1de
+  repo: https://gopkg.in/yaml.v1
 - name: gopkg.in/yaml.v2
   version: f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
 devImports: []

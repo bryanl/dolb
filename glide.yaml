@@ -23,3 +23,8 @@ import:
 - package: github.com/markbates/goth
 - package: github.com/jteeuwen/go-bindata
 - package: github.com/smartystreets/goconvey
+ignore:
+- google.golang.org/api 
+- google.golang.org/appengine
+- google.golang.org/cloud
+- github.com/golang/protobuf
