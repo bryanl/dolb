@@ -1,4 +1,4 @@
-package agentbulder
+package agentbuilder
 
 import (
 	"bytes"
@@ -8,6 +8,8 @@ import (
 	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/pkg/agentuserdata"
 	"github.com/bryanl/dolb/pkg/app"
+	"github.com/bryanl/dolb/pkg/doclient"
+	"github.com/docker/docker/pkg/stringid"
 )
 
 var (
@@ -17,7 +19,6 @@ var (
 
 // AgentBuilder creates and configure agent droplets.
 type AgentBuilder struct {
-	DOClient         app.DOClient
 	EntityManager    entity.Manager
 	GenerateRandomID func() string
 	GenerateUserData func(*agentuserdata.Config) (string, error)
@@ -25,13 +26,20 @@ type AgentBuilder struct {
 
 	bootstrapConfig *app.BootstrapConfig
 	lb              *entity.LoadBalancer
+
+	DOClientFactory func(token string) app.DOClient
 }
 
 var _ app.AgentBuilder = &AgentBuilder{}
 
+func defaultDOClientFactory(token string) app.DOClient {
+	return doclient.New(token)
+}
+
 // New builds an AgentBuilder.
-func New(lb *entity.LoadBalancer, bootstrapConfig *app.BootstrapConfig, options ...func(*AgentBuilder)) *AgentBuilder {
+func New(lb *entity.LoadBalancer, bootstrapConfig *app.BootstrapConfig, em entity.Manager, options ...func(*AgentBuilder)) *AgentBuilder {
 	agentBuilder := AgentBuilder{
+		EntityManager:   em,
 		bootstrapConfig: bootstrapConfig,
 		lb:              lb,
 	}
@@ -50,20 +58,21 @@ func New(lb *entity.LoadBalancer, bootstrapConfig *app.BootstrapConfig, options 
 		}
 	}
 
+	if agentBuilder.GenerateRandomID == nil {
+		agentBuilder.GenerateRandomID = stringid.GenerateRandomID
+	}
+
+	if agentBuilder.DOClientFactory == nil {
+		agentBuilder.DOClientFactory = defaultDOClientFactory
+	}
+
 	return &agentBuilder
 }
 
-// DOClient sets the DOClient for an AgentBuilder.
-func DOClient(doClient app.DOClient) func(*AgentBuilder) {
+// DOClientFactory sets the DOClientFactory for an AgentBuilder.
+func DOClientFactory(fn func(string) app.DOClient) func(*AgentBuilder) {
 	return func(ab *AgentBuilder) {
-		ab.DOClient = doClient
-	}
-}
-
-// EntityManager sets the EntityManager for an AgentBuilder.
-func EntityManager(em entity.Manager) func(*AgentBuilder) {
-	return func(ab *AgentBuilder) {
-		ab.EntityManager = em
+		ab.DOClientFactory = fn
 	}
 }
 
@@ -129,14 +138,15 @@ func (ab *AgentBuilder) Configure(agent *entity.Agent) error {
 		UserData: userData,
 	}
 
-	agentCreateResponse, err := ab.DOClient.CreateAgent(agentCreateRequest)
+	doClient := ab.DOClientFactory(ab.bootstrapConfig.DigitalOceanToken)
+	agentCreateResponse, err := doClient.CreateAgent(agentCreateRequest)
 	if err != nil {
 		return err
 	}
 	agent.DropletID = agentCreateResponse.DropletID
 
 	dnsName := ab.agentDNSName(agent)
-	dnsEntry, err := ab.DOClient.CreateDNS(dnsName, agentCreateResponse.PublicIPAddress)
+	dnsEntry, err := doClient.CreateDNS(dnsName, agentCreateResponse.PublicIPAddress)
 	if err != nil {
 		return err
 	}

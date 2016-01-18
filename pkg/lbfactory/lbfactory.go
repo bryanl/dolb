@@ -8,24 +8,35 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/kvs"
+	"github.com/bryanl/dolb/pkg/agentbuilder"
 	"github.com/bryanl/dolb/pkg/app"
+	"github.com/bryanl/dolb/pkg/cluster"
 	"github.com/docker/docker/pkg/stringid"
 )
+
+// ClusterFactoryFn is a function that genereates an app.Cluster.
+type ClusterFactoryFn func(*entity.LoadBalancer, *app.BootstrapConfig, entity.Manager) app.Cluster
 
 // LBFactory is the default implementation of github.com/bryanl/dolb/pkg/app/LBFactory.
 type LBFactory struct {
 	Context          context.Context
-	Cluster          app.Cluster
 	KVS              kvs.KVS
 	EntityManager    entity.Manager
 	GenerateRandomID func() string
 	Logger           *logrus.Entry
+
+	ClusterFactory ClusterFactoryFn
+}
+
+func defaultClusterFactory(lb *entity.LoadBalancer, bc *app.BootstrapConfig, em entity.Manager) app.Cluster {
+	ab := agentbuilder.New(lb, bc, em)
+	return cluster.New(ab)
 }
 
 var _ app.LoadBalancerFactory = &LBFactory{}
 
 // New builds an instance of LBFactory.
-func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) (app.LoadBalancerFactory, error) {
+func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) app.LoadBalancerFactory {
 	lbf := LBFactory{
 		Context:          context.Background(),
 		EntityManager:    em,
@@ -38,7 +49,11 @@ func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) (app.LoadBa
 		option(&lbf)
 	}
 
-	return &lbf, nil
+	if lbf.ClusterFactory == nil {
+		lbf.ClusterFactory = defaultClusterFactory
+	}
+
+	return &lbf
 }
 
 // Context returns a function that sets LBFactory Context.
@@ -48,10 +63,10 @@ func Context(ctx context.Context) func(*LBFactory) {
 	}
 }
 
-// Cluster returns a function that sets LBFactory Cluster.
-func Cluster(c app.Cluster) func(*LBFactory) {
+// ClusterFactory returns a function that sets LBFactory ClusterFactory.
+func ClusterFactory(fn ClusterFactoryFn) func(*LBFactory) {
 	return func(lbf *LBFactory) {
-		lbf.Cluster = c
+		lbf.ClusterFactory = fn
 	}
 }
 
@@ -74,6 +89,8 @@ func (lbf *LBFactory) Build(bootstrapConfig *app.BootstrapConfig) (*entity.LoadB
 	var err error
 
 	em := lbf.EntityManager
+
+	fmt.Printf("%#v\n", bootstrapConfig)
 
 	if bootstrapConfig.DigitalOceanToken == "" {
 		return nil, fmt.Errorf("DigitalOcean token is required")
@@ -101,7 +118,8 @@ func (lbf *LBFactory) Build(bootstrapConfig *app.BootstrapConfig) (*entity.LoadB
 		}
 	}()
 
-	if _, err := lbf.Cluster.Bootstrap(lb, bootstrapConfig); err != nil {
+	clus := lbf.ClusterFactory(lb, bootstrapConfig, em)
+	if _, err := clus.Bootstrap(lb, bootstrapConfig); err != nil {
 		lbf.Logger.WithError(err).Error("unable to bootstrap load balancer cluster")
 		return nil, err
 	}

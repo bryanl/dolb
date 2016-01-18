@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
@@ -22,8 +21,10 @@ type Cluster struct {
 var _ app.Cluster = &Cluster{}
 
 // New builds a cluster.
-func New(options ...func(*Cluster)) (app.Cluster, error) {
-	c := &Cluster{}
+func New(ab app.AgentBuilder, options ...func(*Cluster)) app.Cluster {
+	c := &Cluster{
+		AgentBuilder: ab,
+	}
 
 	for _, option := range options {
 		option(c)
@@ -33,18 +34,7 @@ func New(options ...func(*Cluster)) (app.Cluster, error) {
 		c.Logger = logrus.WithFields(logrus.Fields{})
 	}
 
-	if c.AgentBuilder == nil {
-		return nil, errors.New("cluster AgentBuilder is nil")
-	}
-
-	return c, nil
-}
-
-// AgentBuilder sets Cluster AgentBuilder.
-func AgentBuilder(ab app.AgentBuilder) func(*Cluster) {
-	return func(c *Cluster) {
-		c.AgentBuilder = ab
-	}
+	return c
 }
 
 // Logger sets Cluster Logger.
@@ -70,31 +60,41 @@ func (c Cluster) Bootstrap(lb *entity.LoadBalancer, bc *app.BootstrapConfig) (ch
 				defer func() {
 					statusChan <- i
 				}()
+
+				logger := c.Logger.WithFields(logrus.Fields{
+					"agent-iteration": id,
+					"loadbalancer-id": lb.ID,
+				})
+
+				logger.Info("creating agent")
+
 				agent, err := c.AgentBuilder.Create(id)
 				if err != nil {
-					c.Logger.
+					logger.
 						WithError(err).
 						WithFields(logrus.Fields{
-						"agent-name":      agent.DropletName,
-						"agent-id":        agent.ID,
-						"loadbalancer-id": agent.ClusterID,
+						"agent-name": agent.DropletName,
+						"agent-id":   agent.ID,
 					}).Error("could not create agent")
 					errors[i] = err
 					return
 				}
 
+				logger.Info("configuring agent")
+
 				err = c.AgentBuilder.Configure(agent)
 				if err != nil {
-					c.Logger.
+					logger.
 						WithError(err).
 						WithFields(logrus.Fields{
-						"agent-name":      agent.DropletName,
-						"agent-id":        agent.ID,
-						"loadbalancer-id": agent.ClusterID,
+						"agent-name": agent.DropletName,
+						"agent-id":   agent.ID,
 					}).Error("could not configure agent")
 					errors[i] = err
 					return
 				}
+
+				logger.Info("created agent")
 
 			}(i + 1)
 		}

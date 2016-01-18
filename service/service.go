@@ -6,7 +6,10 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/net/context"
+
 	log "github.com/Sirupsen/logrus"
+	"github.com/docker/docker/pkg/stringid"
 )
 
 var (
@@ -82,4 +85,45 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"status":            resp.Status,
 		"request-elapased":  totalTime / 1000000,
 	}).Info("api request")
+}
+
+type Handler2 struct {
+	F   HandlerFunc2
+	Ctx context.Context
+}
+
+type HandlerFunc2 func(ctx context.Context, r *http.Request) Response
+
+// ServeHTTP services a http request. It calls the appropriate handler,
+// logs the request, and encodes the response.
+func (h Handler2) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
+
+	u := stringid.GenerateRandomID()
+
+	logger := log.WithFields(log.Fields{
+		"request-id": u,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	resp := h.F(h.Ctx, r)
+	w.WriteHeader(resp.Status)
+
+	_ = json.NewEncoder(w).Encode(&resp)
+
+	totalTime := time.Now().Sub(now)
+
+	if os.Getenv("QUIET_LOG") == "1" && resp.Status <= 400 {
+		return
+	}
+
+	logger.WithFields(log.Fields{
+		"action":            "web-service",
+		"method":            r.Method,
+		"url":               r.URL.String(),
+		"remote_addr":       r.RemoteAddr,
+		"header-user_agent": r.Header.Get("User-Agent"),
+		"status":            resp.Status,
+		"request-elapased":  totalTime / 1000000,
+	}).Info("api2 request")
 }

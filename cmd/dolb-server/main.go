@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/dolb/dao"
+	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/server"
 	"github.com/bryanl/dolb/site"
@@ -22,7 +23,7 @@ const (
 
 var (
 	addr              = envflag.String("ADDR", ":8888", "listen address")
-	dbURL             = envflag.String("DB_URL", "", "URL for database")
+	dsn               = envflag.String("DB_URL", "", "URL for database")
 	serverURL         = envflag.String("SERVER_URL", "", "URL for this service")
 	oauthClientID     = envflag.String("OAUTH_CLIENT_ID", "", "oauth client id")
 	oauthClientSecret = envflag.String("OAUTH_CLIENT_SECRET", "", "oauth client secret")
@@ -42,7 +43,7 @@ func main() {
 		log.Fatal("SERVER_URL environment variable is required")
 	}
 
-	if *dbURL == "" {
+	if *dsn == "" {
 		log.Fatal("DB_URL environment variable is required")
 	}
 
@@ -50,7 +51,7 @@ func main() {
 		log.Fatal("OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, and OAUTH_CALLBACK_URL environment variables are required")
 	}
 
-	sess, err := dao.NewSession(*dbURL)
+	sess, err := dao.NewSession(*dsn)
 	if err != nil {
 		log.WithError(err).Fatal("could not create database connection")
 	}
@@ -77,9 +78,20 @@ func main() {
 
 	dolbSite := site.New(c)
 
+	// FIXME everything above this might be a huge screwup
+
+	em, err := initEntityManager()
+	if err != nil {
+		log.WithError(err).Fatal("could not initialize entity manager")
+	}
+
+	newLBS := server.NewLoadBalancerService(kv, em)
+
 	rootMux := mux.NewRouter()
 	rootMux.Handle("/api/", serverAPI.Mux)
 	rootMux.Handle("/api/{_dummy:.*}", serverAPI.Mux)
+	rootMux.Handle("/api2/", newLBS.Mux)
+	rootMux.Handle("/api2/{_dummy:.*}", newLBS.Mux)
 	rootMux.Handle("/", dolbSite.Mux)
 	rootMux.Handle("/{_dummy:.*}", dolbSite.Mux)
 
@@ -118,4 +130,13 @@ func initKVS(c *server.Config) (kvs.KVS, error) {
 	}
 
 	return kvs.NewEtcd(c.Context, kapi), nil
+}
+
+func initEntityManager() (entity.Manager, error) {
+	connection, err := entity.NewConnection(*dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	return entity.NewManager(connection), nil
 }

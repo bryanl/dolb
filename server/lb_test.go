@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/dolb/entity"
+	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/pkg/app"
 	"golang.org/x/net/context"
 
@@ -19,11 +20,14 @@ func TestCreateLoadBalancer(t *testing.T) {
 	Convey("Given a load balancer service", t, func() {
 		ctx := context.Background()
 		loadBalancerFactory := &MockLoadBalancerFactory{}
-		lbfFn := func() app.LoadBalancerFactory {
+		lbfFn := func(kvs.KVS, entity.Manager) app.LoadBalancerFactory {
 			return loadBalancerFactory
 		}
-		lbs, err := NewLoadBalancerService(LBFactoryFn(lbfFn))
-		So(err, ShouldBeNil)
+
+		kvs := &kvs.MockKVS{}
+		em := &entity.MockManager{}
+
+		lbs := NewLoadBalancerService(kvs, em, LBFactoryFn(lbfFn))
 
 		Convey("When a valid request is made to create a load balancer", func() {
 			bc := app.BootstrapConfig{}

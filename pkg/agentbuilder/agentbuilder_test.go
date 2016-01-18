@@ -1,4 +1,4 @@
-package agentbulder
+package agentbuilder
 
 import (
 	"testing"
@@ -24,15 +24,15 @@ func TestAgentBuilder(t *testing.T) {
 			SSHKeys:           []string{"1"},
 		}
 
-		doClient := &app.MockDOClient{}
 		entityManager := &entity.MockManager{}
 		generateID := func() string { return "12345" }
 		discoveryURL := func() string { return "http://example.com/token" }
 		generateUserData := func(*agentuserdata.Config) (string, error) { return "userdata", nil }
+		doClient := &app.MockDOClient{}
+		generateDOClient := func(string) app.DOClient { return doClient }
 
-		ab := New(lb, bc,
-			DOClient(doClient),
-			EntityManager(entityManager),
+		ab := New(lb, bc, entityManager,
+			DOClientFactory(generateDOClient),
 			GenerateRandomID(generateID),
 			GenerateUserData(generateUserData),
 			DiscoveryURL(discoveryURL),

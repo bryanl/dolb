@@ -15,7 +15,7 @@ func TestManager(t *testing.T) {
 		db, mock, err := sqlmock.New()
 		So(err, ShouldBeNil)
 
-		entityDB := &DB{
+		entityDB := &Connection{
 			db: db,
 		}
 		manager := NewManager(entityDB)

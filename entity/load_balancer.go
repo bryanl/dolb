@@ -7,4 +7,7 @@ type LoadBalancer struct {
 	Region                  string
 	DigitaloceanAccessToken string
 	State                   string
+	FloatingIP              string
+	FlotingIPID             int
+	Leader                  string
 }

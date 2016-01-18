@@ -8,9 +8,21 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// DB is the DOLB database object.
-type DB struct {
+// Connection is the DOLB database object.
+type Connection struct {
 	db *sql.DB
+}
+
+// NewConnection builds a Connection.
+func NewConnection(dsn string) (*Connection, error) {
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Connection{
+		db: db,
+	}, nil
 }
 
 // Manager is an interface which manages entities. It loads and saves things from somewhere.
@@ -27,10 +39,10 @@ type manager struct {
 var _ Manager = &manager{}
 
 // NewManager creates an instance of Manager.
-func NewManager(db *DB) Manager {
+func NewManager(connection *Connection) Manager {
 	return &manager{
 		psql: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		dbx:  sqlx.NewDb(db.db, "postgres"),
+		dbx:  sqlx.NewDb(connection.db, "postgres"),
 	}
 }
 

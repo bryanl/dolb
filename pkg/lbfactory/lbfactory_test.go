@@ -18,8 +18,12 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 		mockCluster := &app.MockCluster{}
 
 		idGen := func() string { return "12345" }
-		lbf, err := New(mockKVS, mockEntityManager, Cluster(mockCluster), GenerateRandomID(idGen))
-		So(err, ShouldBeNil)
+
+		clusterFactoryFn := func(*entity.LoadBalancer, *app.BootstrapConfig, entity.Manager) app.Cluster {
+			return mockCluster
+		}
+
+		lbf := New(mockKVS, mockEntityManager, ClusterFactory(clusterFactoryFn), GenerateRandomID(idGen))
 
 		bootstrapConfig := &app.BootstrapConfig{
 			Name:              "mylb",

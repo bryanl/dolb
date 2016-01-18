@@ -12,8 +12,7 @@ import (
 func TestCluster(t *testing.T) {
 	Convey("Cluster", t, func() {
 		ab := &app.MockAgentBuilder{}
-		c, err := New(AgentBuilder(ab))
-		So(err, ShouldBeNil)
+		c := New(ab)
 
 		Convey("Bootstrap", func() {
 			agent1 := &entity.Agent{}
