@@ -1,0 +1,257 @@
+#cloud-config
+
+coreos:
+  etcd2:
+    discovery: {{.CoreosToken}}
+    advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001
+    initial-advertise-peer-urls: http://$private_ipv4:2380
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    listen-peer-urls: http://$private_ipv4:2380
+  fleet:
+    public-ip: $private_ipv4
+    metadata: region={{.BootstrapConfig.Region}},public_ip=$public_ipv4
+
+  units:
+    - name: etcd2.service
+      drop-ins:
+        - name: 50-timeout.conf
+          content: |
+            [Service]
+            TimeoutStartSec=0
+      command: start
+    - name: fleet.service
+      command: start
+    - name: fleet.socket
+      command: start
+      drop-ins:
+        - name: 30-listen.conf
+          content: |
+            [Socket]
+            ListenStream=127.0.0.1:49153
+
+    - name: dolb_firewall.service
+      command: start
+      content: |
+        [Unit]
+        Description=Configure firewall for dolb agents
+        After=fleet.socket
+        Requires=fleet.socket
+
+        [Service]
+        TimeoutStartSec=0
+        ExecStart=/root/bin/fixup_firewall.sh
+    {{if .BootstrapConfig.HasSyslog}}- name: remote_syslog.service
+      command: start
+      content: |
+        [Unit]
+        Description=Remote Syslog
+        After=systemd-journald.service
+        Requires=systemd-journald.service
+
+        [Service]
+        ExecStart=/bin/sh -c "journalctl -f | ncat {{if .BootstrapConfig.RemoteSyslog.EnableSSL}}--ssl{{end}} {{.BootstrapConfig.RemoteSyslog.Host}} {{.BootstrapConfig.RemoteSyslog.Port}}"
+        TimeoutStartSec=0
+        Restart=on-failure
+        RestartSec=5s
+        
+        [Install]
+        WantedBy=multi-user.target{{end}}
+
+    - name: dolb-agent-start.service
+      command: start
+      content: |
+        [Unit]
+        Description=Start dolb-agent
+        After=docker.service
+        After=etcd2.service
+        After=fleet.service
+        After=dolb_firewall.service
+        Requires=docker.service
+        Requires=etcd2.service 
+        Requires=fleet.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/home/core/units/start-agent.sh
+
+    - name: swapon.service
+      command: start
+      content: |
+        [Unit]
+        Description=Turn on swap
+
+        [Service]
+        Type=oneshot
+        Environment="SWAPFILE=/1GiB.swap"
+        RemainAfterExit=true
+        ExecStartPre=/usr/bin/touch ${SWAPFILE}
+        ExecStartPre=/usr/bin/chattr +C ${SWAPFILE}
+        ExecStartPre=/usr/bin/fallocate -l 1024m ${SWAPFILE}
+        ExecStartPre=/usr/bin/chmod 600 ${SWAPFILE}
+        ExecStartPre=/usr/sbin/mkswap ${SWAPFILE}
+        ExecStartPre=/usr/sbin/losetup -f ${SWAPFILE}
+        ExecStart=/usr/bin/sh -c "/sbin/swapon $(/usr/sbin/losetup -j ${SWAPFILE} | /usr/bin/cut -d : -f 1)"
+        ExecStop=/usr/bin/sh -c "/sbin/swapoff $(/usr/sbin/losetup -j ${SWAPFILE} | /usr/bin/cut -d : -f 1)"
+        ExecStopPost=/usr/bin/sh -c "/usr/sbin/losetup -d $(/usr/sbin/losetup -j ${SWAPFILE} | /usr/bin/cut -d : -f 1)"
+
+        [Install]
+        WantedBy=multi-user.target
+
+write_files:
+  - path: /home/core/units/start-agent.sh
+    permissions : 0755
+    content: |
+      #!/bin/bash
+
+      denv=/home/core/digitalocean.env
+      /usr/bin/grep -q -F 'DROPLET_ID' $denv || echo "DROPLET_ID=$(curl http://169.254.169.254/metadata/v1/id)" >> $denv
+      /usr/bin/grep -q -F 'AGENT_NAME' $denv || echo "AGENT_NAME=$(hostname)" >> $denv
+      source /etc/environment
+
+      until [[ $(curl -s http://localhost:4001/v2/members | jq '.[] | .[].peerURLs | length' | wc -l) == "3" ]]; do sleep 2; done
+      echo "... etcd up"
+      sleep 5
+
+      until [[ $(fleetctl list-machines | wc -l) == "4" ]]; do sleep 2; done
+      echo "... fleet up"
+
+      /usr/bin/etcdctl member list | /usr/bin/head -1 | /usr/bin/grep $COREOS_PRIVATE_IPV4 &> /dev/null
+      rc=$?
+      if [[ $rc == 0 ]]; then
+        /usr/bin/fleetctl submit /home/core/units/dolb-agent@.service /home/core/units/haproxy-confd@.service
+        for i in 1 2 3; do
+          /usr/bin/fleetctl start dolb-agent@$i.service
+          /usr/bin/fleetctl start haproxy-confd@$i.service
+        done
+      fi
+
+  - path: /home/core/units/dolb-agent@.service
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=dolb agent
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      TimeoutStartSec=0
+      KillMode=none
+      Restart=always
+      RestartSec=5s
+      EnvironmentFile=/etc/environment
+      Environment=AGENT_VERSION={{.AgentVersion}}
+      ExecStartPre=/usr/bin/docker pull bryanl/dolb-agent:0.0.2
+      ExecStartPre=-/usr/bin/docker kill dolb-agent-%m
+      ExecStart=/usr/bin/docker run -v /etc/machine-id:/etc/machine-id -p 8889:8889 --privileged=true --net=host --rm --env-file /home/core/digitalocean.env -e ETCDENDPOINTS=http://${COREOS_PRIVATE_IPV4}:4001 --name dolb-agent-%m bryanl/dolb-agent:0.0.2
+      ExecStop=/usr/bin/docker kill dolb-agent-%m
+
+      [X-Fleet]
+      Conflicts=dolb-agent@*.service
+  - path: /home/core/units/haproxy-confd@.service
+    permissions: 0644
+    content: |
+      [Unit]
+      Description=haproxy service
+      After=docker.service
+      After=dolb-agent-start.service
+      Requires=docker.service
+
+      [Service]
+      TimeoutStartSec=0
+      KillMode=none
+      Restart=always
+      RestartSec=5s
+      EnvironmentFile=/etc/environment
+      ExecStartPre=-/usr/bin/docker kill haproxy-confd-%i
+      ExecStartPre=/usr/bin/docker pull bryanl/dolb-haproxy-confd:0.0.2
+      ExecStart=/usr/bin/docker run --rm --net=host -e ETCD_NODE=${COREOS_PRIVATE_IPV4}:4001 -p 1000:1000 --name haproxy-confd-%i bryanl/dolb-haproxy-confd:0.0.2
+
+      [X-Fleet]
+      Conflicts=haproxy-confd@*.service
+  - path: /home/core/digitalocean.env
+    permissions: 0644
+    content: |
+      AGENT_ID={{.AgentID}}
+      AGENT_REGION={{.BootstrapConfig.Region}}
+      DIGITALOCEAN_ACCESS_TOKEN={{.BootstrapConfig.DigitalOceanToken}}
+      CLUSTER_ID={{.ClusterID}}
+      CLUSTER_NAME={{.BootstrapConfig.Name}}
+      SERVER_URL={{.ServerURL}}
+  - path: /root/bin/fixup_firewall.sh
+    permissions: 0755
+    content: |
+      #!/bin/bash
+
+      until [[ $(curl -s http://localhost:4001/v2/members | jq '.[] | .[].peerURLs | length' | wc -l) == "3" ]]; do sleep 2; done
+      echo "... etcd up"
+
+      sleep 5
+
+      until [[ $(fleetctl list-machines | wc -l) == "4" ]]; do sleep 2; done
+      echo "... fleet up"
+
+      echo "Obtaining IP addresses of the nodes in the cluster..."
+      MACHINES_IP=$(fleetctl list-machines --fields=ip --no-legend | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
+
+      if [ -n "$NEW_NODE" ]; then
+        MACHINES_IP+=,$NEW_NODE
+      fi
+
+      echo "Cluster IPs: $MACHINES_IP"
+
+      echo "Creating firewall Rules..."
+      # Firewall Template
+      template=$(cat <<EOF
+      *filter
+
+      :INPUT DROP [0:0]
+      :FORWARD DROP [0:0]
+      :OUTPUT ACCEPT [0:0]
+      :Firewall-INPUT - [0:0]
+      -A INPUT -j Firewall-INPUT
+      -A FORWARD -j Firewall-INPUT
+      -A Firewall-INPUT -i lo -j ACCEPT
+      -A Firewall-INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+      -A Firewall-INPUT -p icmp --icmp-type destination-unreachable -j ACCEPT
+      -A Firewall-INPUT -p icmp --icmp-type time-exceeded -j ACCEPT
+
+      # Ping
+      -A Firewall-INPUT -p icmp --icmp-type echo-request -j ACCEPT
+
+      # Accept any established connections
+      -A Firewall-INPUT -m conntrack --ctstate  ESTABLISHED,RELATED -j ACCEPT
+
+      # Enable the traffic between the nodes of the cluster
+      -A Firewall-INPUT -s $MACHINES_IP -j ACCEPT
+
+      # Allow connections from docker container
+      -A Firewall-INPUT -i docker0 -j ACCEPT
+
+      # Accept ssh, http, https and git
+      -A Firewall-INPUT -m conntrack --ctstate NEW -m multiport -p tcp --dports 22,80,443 -j ACCEPT
+
+      # Log and drop everything else
+      -A Firewall-INPUT -j LOG
+      -A Firewall-INPUT -j REJECT
+
+      COMMIT
+      EOF
+      )
+
+      echo "Saving firewall Rules"
+      echo "$template" | sudo tee /var/lib/iptables/rules-save > /dev/null
+
+      echo "Enabling iptables service "
+      sudo systemctl enable iptables-restore.service
+
+      # Flush custom rules before the restore (so this script is idempotent)
+      sudo /usr/sbin/iptables -F Firewall-INPUT 2> /dev/null
+
+      #echo "Loading custom iptables firewall"
+      sudo /sbin/iptables-restore --noflush /var/lib/iptables/rules-save
+
+      echo "Done"
+
+
+
+
