@@ -9,7 +9,6 @@ import (
 	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/pkg/app"
-	"github.com/bryanl/dolb/pkg/cluster"
 	"github.com/docker/docker/pkg/stringid"
 )
 
@@ -26,10 +25,9 @@ type LBFactory struct {
 var _ app.LoadBalancerFactory = &LBFactory{}
 
 // New builds an instance of LBFactory.
-func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) app.LoadBalancerFactory {
+func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) (app.LoadBalancerFactory, error) {
 	lbf := LBFactory{
 		Context:          context.Background(),
-		Cluster:          cluster.New(),
 		EntityManager:    em,
 		KVS:              kv,
 		Logger:           logrus.WithFields(logrus.Fields{}),
@@ -40,7 +38,7 @@ func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) app.LoadBal
 		option(&lbf)
 	}
 
-	return &lbf
+	return &lbf, nil
 }
 
 // Context returns a function that sets LBFactory Context.
@@ -103,7 +101,7 @@ func (lbf *LBFactory) Build(bootstrapConfig *app.BootstrapConfig) (*entity.LoadB
 		}
 	}()
 
-	if err := lbf.Cluster.Bootstrap(lb); err != nil {
+	if _, err := lbf.Cluster.Bootstrap(lb, bootstrapConfig); err != nil {
 		lbf.Logger.WithError(err).Error("unable to bootstrap load balancer cluster")
 		return nil, err
 	}

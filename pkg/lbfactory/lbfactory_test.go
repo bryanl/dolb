@@ -18,9 +18,10 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 		mockCluster := &app.MockCluster{}
 
 		idGen := func() string { return "12345" }
-		lbf := New(mockKVS, mockEntityManager, Cluster(mockCluster), GenerateRandomID(idGen))
+		lbf, err := New(mockKVS, mockEntityManager, Cluster(mockCluster), GenerateRandomID(idGen))
+		So(err, ShouldBeNil)
 
-		bootStrapConfig := &app.BootstrapConfig{
+		bootstrapConfig := &app.BootstrapConfig{
 			Name:              "mylb",
 			Region:            "dev0",
 			DigitalOceanToken: "token",
@@ -28,22 +29,22 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 
 		newLB := entity.LoadBalancer{
 			ID:                      "12345",
-			Name:                    bootStrapConfig.Name,
-			Region:                  bootStrapConfig.Region,
-			DigitaloceanAccessToken: bootStrapConfig.DigitalOceanToken,
+			Name:                    bootstrapConfig.Name,
+			Region:                  bootstrapConfig.Region,
+			DigitaloceanAccessToken: bootstrapConfig.DigitalOceanToken,
 			State: "initialized",
 		}
 
 		Convey("When there are no cluster errors", func() {
 			mockEntityManager.On("Create", &newLB).Return(nil)
 
-			mockCluster.On("Bootstrap", &newLB).Return(nil)
+			mockCluster.On("Bootstrap", &newLB, bootstrapConfig).Return(nil, nil)
 
 			var setOpts *kvs.SetOptions
 			node := &kvs.Node{}
 			mockKVS.On("Set", "/dolb/cluster/12345", "12345", setOpts).Return(node, nil)
 
-			lb, err := lbf.Build(bootStrapConfig)
+			lb, err := lbf.Build(bootstrapConfig)
 
 			Convey("It returns no error", func() {
 				So(err, ShouldBeNil)
@@ -61,9 +62,9 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 		})
 
 		Convey("With a missing DigitalOcean token", func() {
-			bootStrapConfig.DigitalOceanToken = ""
+			bootstrapConfig.DigitalOceanToken = ""
 
-			_, err := lbf.Build(bootStrapConfig)
+			_, err := lbf.Build(bootstrapConfig)
 
 			Convey("It returns an error", func() {
 				So(err, ShouldNotBeNil)
@@ -77,7 +78,7 @@ func TestLoadBalancerFactoryBuild(t *testing.T) {
 			invalidLB.State = "invalid"
 			mockEntityManager.On("Save", &invalidLB).Return(nil).Once()
 
-			_, err := lbf.Build(bootStrapConfig)
+			_, err := lbf.Build(bootstrapConfig)
 
 			Convey("It returns an error", func() {
 				So(err, ShouldNotBeNil)

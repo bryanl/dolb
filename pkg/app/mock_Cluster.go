@@ -8,15 +8,24 @@ type MockCluster struct {
 	mock.Mock
 }
 
-func (_m *MockCluster) Bootstrap(lb *entity.LoadBalancer) error {
-	ret := _m.Called(lb)
+func (_m *MockCluster) Bootstrap(lb *entity.LoadBalancer, bootstrapConfig *BootstrapConfig) (chan int, error) {
+	ret := _m.Called(lb, bootstrapConfig)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*entity.LoadBalancer) error); ok {
-		r0 = rf(lb)
+	var r0 chan int
+	if rf, ok := ret.Get(0).(func(*entity.LoadBalancer, *BootstrapConfig) chan int); ok {
+		r0 = rf(lb, bootstrapConfig)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(chan int)
+		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*entity.LoadBalancer, *BootstrapConfig) error); ok {
+		r1 = rf(lb, bootstrapConfig)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
