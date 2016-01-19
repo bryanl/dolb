@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/context"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/docker/pkg/stringid"
+	"github.com/bryanl/dolb/dolbutil"
 )
 
 var (
@@ -99,7 +99,7 @@ type HandlerFunc2 func(ctx context.Context, r *http.Request) Response
 func (h Handler2) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
-	u := stringid.GenerateRandomID()
+	u := dolbutil.GenerateRandomID()
 
 	logger := log.WithFields(log.Fields{
 		"request-id": u,

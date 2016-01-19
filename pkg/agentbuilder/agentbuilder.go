@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dolbutil"
 	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/pkg/agentuserdata"
 	"github.com/bryanl/dolb/pkg/app"
 	"github.com/bryanl/dolb/pkg/doclient"
-	"github.com/docker/docker/pkg/stringid"
 )
 
 var (
@@ -23,6 +24,7 @@ type AgentBuilder struct {
 	GenerateRandomID func() string
 	GenerateUserData func(*agentuserdata.Config) (string, error)
 	DiscoveryURL     func() string
+	Logger           *logrus.Entry
 
 	bootstrapConfig *app.BootstrapConfig
 	lb              *entity.LoadBalancer
@@ -59,11 +61,15 @@ func New(lb *entity.LoadBalancer, bootstrapConfig *app.BootstrapConfig, em entit
 	}
 
 	if agentBuilder.GenerateRandomID == nil {
-		agentBuilder.GenerateRandomID = stringid.GenerateRandomID
+		agentBuilder.GenerateRandomID = dolbutil.GenerateRandomID
 	}
 
 	if agentBuilder.DOClientFactory == nil {
 		agentBuilder.DOClientFactory = defaultDOClientFactory
+	}
+
+	if agentBuilder.Logger == nil {
+		agentBuilder.Logger = app.DefaultLogger()
 	}
 
 	return &agentBuilder
@@ -97,8 +103,21 @@ func DiscoveryURL(fn func() string) func(*AgentBuilder) {
 	}
 }
 
+// Logger sets Logger for an AgentBuilder.
+func Logger(logger *logrus.Entry) func(*AgentBuilder) {
+	return func(ab *AgentBuilder) {
+		ab.Logger = logger
+	}
+}
+
 // Create Creates a droplet in the database.
 func (ab *AgentBuilder) Create(id int) (*entity.Agent, error) {
+	var err error
+	defer func() {
+		if err != nil {
+			ab.Logger.WithError(err).WithField("agent-instance", id).Error("unable to agent")
+		}
+	}()
 	name := fmt.Sprintf("agent-%s-%d", ab.lb.ID, id)
 
 	agent := &entity.Agent{
@@ -108,7 +127,7 @@ func (ab *AgentBuilder) Create(id int) (*entity.Agent, error) {
 		Region:      ab.lb.Region,
 	}
 
-	if err := ab.EntityManager.Create(agent); err != nil {
+	if err = ab.EntityManager.Create(agent); err != nil {
 		return nil, err
 	}
 

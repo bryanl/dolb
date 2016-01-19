@@ -6,12 +6,12 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/dolb/dolbutil"
 	"github.com/bryanl/dolb/entity"
 	"github.com/bryanl/dolb/kvs"
 	"github.com/bryanl/dolb/pkg/agentbuilder"
 	"github.com/bryanl/dolb/pkg/app"
 	"github.com/bryanl/dolb/pkg/cluster"
-	"github.com/docker/docker/pkg/stringid"
 )
 
 // ClusterFactoryFn is a function that genereates an app.Cluster.
@@ -41,8 +41,8 @@ func New(kv kvs.KVS, em entity.Manager, options ...func(*LBFactory)) app.LoadBal
 		Context:          context.Background(),
 		EntityManager:    em,
 		KVS:              kv,
-		Logger:           logrus.WithFields(logrus.Fields{}),
-		GenerateRandomID: stringid.GenerateRandomID,
+		Logger:           app.DefaultLogger(),
+		GenerateRandomID: dolbutil.GenerateRandomID,
 	}
 
 	for _, option := range options {
