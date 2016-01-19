@@ -11,6 +11,7 @@ import (
 	"github.com/bryanl/dolb/do"
 	"github.com/bryanl/dolb/dolbutil"
 	"github.com/bryanl/dolb/kvs"
+	"github.com/bryanl/dolb/pkg/app"
 	"github.com/bryanl/dolb/service"
 	"github.com/gorilla/mux"
 )
@@ -45,7 +46,7 @@ func NewConfig(bd, su string, sess dao.Session) *Config {
 			return do.NewLiveDigitalOcean(client, config.BaseDomain)
 		},
 		LBUpdateChan: make(chan *dao.LoadBalancer, 10),
-		logger:       logrus.WithFields(logrus.Fields{}),
+		logger:       app.DefaultLogger(),
 	}
 }
 

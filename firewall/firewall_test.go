@@ -3,8 +3,7 @@ package firewall
 import (
 	"testing"
 
-	"github.com/Sirupsen/logrus"
-
+	"github.com/bryanl/dolb/pkg/app"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -12,7 +11,7 @@ func TestIptablesFirewallOpen(t *testing.T) {
 
 	Convey("Given an instance of IptablesFirewall", t, func() {
 		var (
-			log = logrus.WithFields(logrus.Fields{})
+			log = app.DefaultLogger()
 			err error
 		)
 

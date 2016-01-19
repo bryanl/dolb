@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	. "github.com/bryanl/dolb/kvs"
+	"github.com/bryanl/dolb/pkg/app"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,13 +17,13 @@ var _ = Describe("Haproxy", func() {
 	var (
 		i     int
 		idGen = func() string {
-			i += 1
+			i++
 			return strconv.Itoa(i)
 		}
 		kvs     *MockKVS
 		haproxy *LiveHaproxy
 		err     error
-		log     = logrus.WithFields(logrus.Fields{})
+		log     = app.DefaultLogger()
 	)
 
 	BeforeEach(func() {

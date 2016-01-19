@@ -31,7 +31,7 @@ func New(ab app.AgentBuilder, options ...func(*Cluster)) app.Cluster {
 	}
 
 	if c.Logger == nil {
-		c.Logger = logrus.WithFields(logrus.Fields{})
+		c.Logger = app.DefaultLogger()
 	}
 
 	return c

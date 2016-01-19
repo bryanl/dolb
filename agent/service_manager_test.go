@@ -6,6 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	. "github.com/bryanl/dolb/agent"
 	"github.com/bryanl/dolb/kvs"
+	"github.com/bryanl/dolb/pkg/app"
 	"github.com/bryanl/dolb/service"
 
 	. "github.com/onsi/ginkgo"
@@ -16,7 +17,7 @@ var _ = Describe("EtcdServiceManager", func() {
 
 	var (
 		serviceManager *EtcdServiceManager
-		log            = logrus.WithFields(logrus.Fields{})
+		log            = app.DefaultLogger()
 		haproxy        *kvs.MockHaproxy
 		firewall       *kvs.MockFirewall
 		err            error
