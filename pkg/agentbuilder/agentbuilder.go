@@ -20,14 +20,15 @@ var (
 
 // AgentBuilder creates and configure agent droplets.
 type AgentBuilder struct {
-	EntityManager    entity.Manager
-	GenerateRandomID func() string
-	GenerateUserData func(*agentuserdata.Config) (string, error)
-	DiscoveryURL     func() string
-	Logger           *logrus.Entry
+	EntityManager        entity.Manager
+	GenerateRandomID     func() string
+	GenerateUserData     func(*agentuserdata.Config) (string, error)
+	GenerateDiscoveryURL func() string
+	Logger               *logrus.Entry
 
 	bootstrapConfig *app.BootstrapConfig
 	lb              *entity.LoadBalancer
+	discoveryURL    string
 
 	DOClientFactory func(token string) app.DOClient
 }
@@ -50,8 +51,8 @@ func New(lb *entity.LoadBalancer, bootstrapConfig *app.BootstrapConfig, em entit
 		option(&agentBuilder)
 	}
 
-	if agentBuilder.DiscoveryURL == nil {
-		agentBuilder.DiscoveryURL = defaultDiscoveryURL
+	if agentBuilder.GenerateDiscoveryURL == nil {
+		agentBuilder.GenerateDiscoveryURL = defaultDiscoveryURL
 	}
 
 	if agentBuilder.GenerateUserData == nil {
@@ -71,6 +72,8 @@ func New(lb *entity.LoadBalancer, bootstrapConfig *app.BootstrapConfig, em entit
 	if agentBuilder.Logger == nil {
 		agentBuilder.Logger = app.DefaultLogger()
 	}
+
+	agentBuilder.discoveryURL = agentBuilder.GenerateDiscoveryURL()
 
 	return &agentBuilder
 }
@@ -96,10 +99,10 @@ func GenerateUserData(fn func(c *agentuserdata.Config) (string, error)) func(*Ag
 	}
 }
 
-// DiscoveryURL sets DiscoveryURL for an AgentBuilder.
-func DiscoveryURL(fn func() string) func(*AgentBuilder) {
+// GenerateDiscoveryURL sets DiscoveryURL for an AgentBuilder.
+func GenerateDiscoveryURL(fn func() string) func(*AgentBuilder) {
 	return func(ab *AgentBuilder) {
-		ab.DiscoveryURL = fn
+		ab.GenerateDiscoveryURL = fn
 	}
 }
 
@@ -115,7 +118,7 @@ func (ab *AgentBuilder) Create(id int) (*entity.Agent, error) {
 	var err error
 	defer func() {
 		if err != nil {
-			ab.Logger.WithError(err).WithField("agent-instance", id).Error("unable to agent")
+			ab.Logger.WithError(err).WithField("agent-instance", id).Error("unable to create agent")
 		}
 	}()
 	name := fmt.Sprintf("agent-%s-%d", ab.lb.ID, id)
@@ -136,12 +139,21 @@ func (ab *AgentBuilder) Create(id int) (*entity.Agent, error) {
 
 // Configure builds and configures an agent droplet.
 func (ab *AgentBuilder) Configure(agent *entity.Agent) error {
+	var err error
+	defer func() {
+		if err != nil {
+			ab.Logger.WithError(err).WithField("agent-id", agent.ID).Error("unable to configure agent")
+		} else {
+			ab.Logger.WithField("agent-id", agent.ID).Info("agent configured")
+		}
+	}()
+
 	userDataConfig := &agentuserdata.Config{
 		AgentVersion:    "0.0.2", // TODO where is this coming from?
 		AgentID:         agent.ID,
 		BootstrapConfig: ab.bootstrapConfig,
 		ClusterID:       agent.ClusterID,
-		CoreosToken:     ab.DiscoveryURL(),
+		CoreosToken:     ab.discoveryURL,
 		ServerURL:       "https://dolb.ngrok.io", // TODO this needs to be injected
 	}
 

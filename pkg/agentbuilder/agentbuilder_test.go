@@ -35,7 +35,7 @@ func TestAgentBuilder(t *testing.T) {
 			DOClientFactory(generateDOClient),
 			GenerateRandomID(generateID),
 			GenerateUserData(generateUserData),
-			DiscoveryURL(discoveryURL),
+			GenerateDiscoveryURL(discoveryURL),
 		)
 
 		Convey("Create", func() {
