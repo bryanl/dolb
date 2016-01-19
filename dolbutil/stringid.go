@@ -52,8 +52,7 @@ func generateID(crypto bool) string {
 
 // GenerateRandomID returns an unique id.
 func GenerateRandomID() string {
-	return generateID(true)
-
+	return TruncateID(generateID(true))
 }
 
 // GenerateNonCryptoID generates unique id without using cryptographically
